@@ -1,6 +1,9 @@
 *
+!js
+!shaders
 !.gitignore
 !*.js
+gl-matrix-min.js
 !*.html
 !*.css
 !README
