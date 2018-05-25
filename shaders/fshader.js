@@ -9,6 +9,7 @@ const fsSrc = `
 	#define MAX_STEPS 64
 	#define PI 3.14159
 	#define EPSILON .0001
+	#define SPECULAR_EXPONENT 20.
 	struct Ray {
 		vec3 ro;
 		vec3 rd;
@@ -16,25 +17,50 @@ const fsSrc = `
 	float sphereSDF(vec3 p, float r) {
 		return length(p) - r;
 	}
+	float sceneSDF(vec3 p) {
+		return sphereSDF(p, 1.);
+	}
 	vec3 getRd(vec2 fragCoord, float fov) {
 		vec2 uv = 2. * fragCoord / windowSize - 1.;
 		fov = fov * PI / 180.;
 		float focal = 1. / tan(fov / 2.);
 		return normalize(vec3(uv, -focal));
 	}
-	void main() {
-		vec3 col = vec3(0.);
-		vec3 rd = getRd(gl_FragCoord.xy, 35.);
-		float d = 0.;
+	float raymarch(vec3 ro, vec3 rd) {
 		float dist = MIN_DIST;
-		vec3 ro = vec3(0., 0., -5.);
+		float d = 0.;
 		for(int i = 0; i < MAX_STEPS; ++i) {
-			if((d = sphereSDF(ro - rd * dist, .5)) <= EPSILON) {
-				col = vec3(1.);
-				break;
-			}
+			if((d = sceneSDF(ro - rd * dist)) <= EPSILON)
+				return dist;
 			dist += d;
 		}
+		return -1.;
+	}
+	vec3 getNormal(vec3 iXPos) {
+		vec2 diff = vec2(EPSILON, 0.);
+		return normalize(vec3(
+		                 sceneSDF(iXPos + diff.xyy) - sceneSDF(iXPos - diff.xyy),
+		                 sceneSDF(iXPos + diff.yxy) - sceneSDF(iXPos - diff.yxy),
+		                 sceneSDF(iXPos + diff.yyx) - sceneSDF(iXPos - diff.yyx)
+		       ));
+	}
+	vec3 blinn_phong(vec3 n, vec3 l, vec3 eye) {
+		vec3 r = -reflect(l, n);
+		return vec3(0., 0., 1.) * pow(max(0., dot(r, eye)), SPECULAR_EXPONENT);
+	}
+	vec3 diffuse(vec3 n, vec3 l) {
+		return vec3(.7, .8, .4) * max(0., dot(n,l));
+	}
+	void main() {
+		vec3 rd = getRd(gl_FragCoord.xy, 35.);
+		vec3 ro = vec3(0., 0., -5.);
+		float dist = raymarch(ro, rd);
+		vec3 col = vec3(float(dist >= EPSILON));
+		vec3 iXPos = ro - rd * dist;
+		vec3 n = getNormal(iXPos);
+		vec3 light = vec3(3.);
+		vec3 l = normalize(light - iXPos);
+		col *= blinn_phong(n, l, -rd) + diffuse(n, l) + .2;
 		gl_FragColor = vec4(col, 1.);
 	}
 `;
