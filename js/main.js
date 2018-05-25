@@ -50,7 +50,10 @@ function getProgramInfo(gl, shaderProg) {
 		},
 		uniformLocations: {
 			projMatrix: gl.getUniformLocation(shaderProg, 'uProj'),
-			mvMatrix: gl.getUniformLocation(shaderProg, 'uMV')
+			mvMatrix: gl.getUniformLocation(shaderProg, 'uMV'),
+			cameraPosition: gl.getUniformLocation(shaderProg, 'cameraPos'),
+			focalLength: gl.getUniformLocation(shaderProg, "focalLength"),
+			windowSize: gl.getUniformLocation(shaderProg, "windowSize"),
 		}
 	};
 }
@@ -61,10 +64,10 @@ function initBuffers(gl) {
 	gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuf);
 
-	const cube = createCube();
+	const plane = createPlane();
 
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cube.vertices), gl.STATIC_DRAW);
-	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cube.indices), gl.STATIC_DRAW);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(plane.vertices), gl.STATIC_DRAW);
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(plane.indices), gl.STATIC_DRAW);
 
 	return {
 		position: posBuf,
@@ -80,14 +83,14 @@ function draw(gl, programInfo, bufs) {
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-	const fov = 45 * Math.PI / 180;
+	const fov = 135. * Math.PI / 180;
+	const focal = 1. / Math.tan(fov / 2);
 	const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
 	const zNear = .1;
 	const zFar = 100;
 	const projMatrix = mat4.perspective(mat4.create(), fov, aspect, zNear, zFar);
 	const mvMatrix = mat4.create();
-	mat4.translate(mvMatrix, mvMatrix, [0, 0, -5]);
-	mat4.rotate(mvMatrix, mvMatrix, 45, vec3.fromValues(0, 1, 0));
+	mat4.translate(mvMatrix, mvMatrix, [0, 0, -focal]);
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, bufs.position);
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufs.indices);
@@ -97,16 +100,32 @@ function draw(gl, programInfo, bufs) {
 
 	gl.useProgram(programInfo.program);
 
-	setUniforms(gl, programInfo, projMatrix, mvMatrix);
+	setUniforms(gl, programInfo, {
+		projMatrix: projMatrix,
+		mvMatrix: mvMatrix,
+		focalLength: focal,
+		windowSize: [gl.canvas.clientWidth, gl.canvas.clientHeight]
+	});
 
-	gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
+	gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
 }
 
-function setUniforms(gl, programInfo, projMatrix, mvMatrix) {
+function setUniforms(gl, programInfo, uniforms) {
 	gl.uniformMatrix4fv(programInfo.uniformLocations.projMatrix, false,
-		projMatrix);
+		uniforms.projMatrix);
 	gl.uniformMatrix4fv(programInfo.uniformLocations.mvMatrix, false,
-		mvMatrix);
+		uniforms.mvMatrix);
+	gl.uniform3fv(programInfo.uniformLocations.cameraPosition, getCameraPos(uniforms.mvMatrix));
+	gl.uniform1f(programInfo.uniformLocations.focalLength, uniforms.focalLength);
+	gl.uniform2fv(programInfo.uniformLocations.windowSize, uniforms.windowSize);
+}
+
+function getCameraPos(mvMatrix) {
+	let translate = vec3.fromValues(mvMatrix[12], mvMatrix[13], mvMatrix[14]);
+	vec3.negate(translate, translate);
+	let rotmtx = mat3.normalFromMat4(mat3.create(), mvMatrix);
+	vec3.transformMat3(translate, translate, rotmtx);
+	return new Float32Array(translate);
 }
 
 function main() {
