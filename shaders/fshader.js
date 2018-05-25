@@ -66,9 +66,14 @@ const fsSrc = `
 		vec3 col = vec3(float(dist >= EPSILON));
 		vec3 iXPos = ro - rd * dist;
 		vec3 n = getNormal(iXPos);
-		vec3 light = vec3(3.);
-		vec3 l = normalize(light - iXPos);
-		col *= blinn_phong(n, l, -rd) + env_map(n, l, -rd) + 0.4;
+		vec3 toplight = vec3(0., 5., -4.);
+		vec3 centerlight = vec3(0., 0., 4.);
+		vec3 bottomlight = vec3(0., -5., -3.);
+		vec3 topl = normalize(toplight - iXPos);
+		vec3 centerl = normalize(centerlight - iXPos);
+		vec3 bottoml = normalize(bottomlight - iXPos);
+		vec3 highlights = blinn_phong(n, topl, -rd) + blinn_phong(n, bottoml, -rd);
+		col *= mix(highlights, env_map(n, centerl, -rd), .2) + 0.4;
 		vec3 back = textureCube(envMap, rd).rgb;
 		if(col.x == 0.)
 			col = back;
