@@ -1,10 +1,29 @@
+const webgl_version_wherestopper = wherestopper();
 function getGLContext() {
 	const canvas = document.querySelector("#glCanvas");
 	if(!canvas) {
 		console.log("Error getting canvas");
 		return undefined;
 	}
-	return canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+	let gl = null;
+	for(var i = 0; i < 3; ++i)
+		if((gl = canvas.getContext(webgl_version_wherestopper.next().value)))
+			return gl;
+	return null;
+}
+
+const webgl_versions = ["webgl2", "webgl", "experimental-webgl"];
+function* wherestopper() {
+	for(var i = 0; i < 3; ++i)
+		yield webgl_versions[i];
+}
+
+function get_webgl_version() {
+	if(webgl_version_wherestopper.next().value == "webgl")
+		return 2;
+	if(webgl_version_wherestopper.next().value == "experimental-webgl")
+		return 1;
+	return 0;
 }
 
 function initShaderProgram(gl, vsSrc, fsSrc) {
@@ -42,6 +61,85 @@ function loadShader(gl, type, src) {
 	return shader;
 }
 
+const NUM_FACES = 6;
+function loadCubemap(gl) {
+	const texture = gl.createTexture();
+	const pixel = new Uint8Array([0, 0, 255, 255]);
+	load_cubemap_textures(gl, texture, null, pixel);
+	const img_path = "assets/cubemap/";
+	const img_paths = ["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"].map(x => img_path + x);
+	let promises = [];
+	for(var i = 0; i < NUM_FACES; ++i)
+		promises.push(loadImg(img_paths[i]));
+	return Promise.all(promises).then((images) => {
+		if(load_cubemap_textures(gl, texture, images))
+			Promise.resolve("Textures loaded");
+		else
+			Promise.reject("Can't load textures!");
+	}, (err) => {
+		Promise.reject(err);
+	});
+}
+
+function loadImg(img_name) {
+	const image = new Image();
+	const prom = new Promise((resolve, reject) => {
+		image.onload = () => {
+			resolve(image);
+		};
+		image.onerror = (err) => {
+			reject(err || "Cannot load image");
+		};
+	});
+	image.src = img_name;
+	return prom;
+}
+
+function load_cubemap_textures(gl, texture, face_imgs, dummy = undefined) {
+	gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+	let use_dummy = false;
+	if((use_dummy = !face_imgs)) {
+		if(dummy) {
+			face_imgs = [];
+			for(var i = 0; i < NUM_FACES; ++i)
+				face_imgs.push(dummy);
+		} else {
+			console.log("No textures provided.");
+			return false;
+		}
+	}
+	const face_types = [gl.TEXTURE_CUBE_MAP_POSITIVE_X,
+	                    gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
+	                    gl.TEXTURE_CUBE_MAP_POSITIVE_Y,
+	                    gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
+	                    gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
+	                    gl.TEXTURE_CUBE_MAP_NEGATIVE_Z];
+	if(use_dummy)
+		for(var i = 0; i < NUM_FACES; ++i)
+			gl.texImage2D(face_types[i], 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, dummy);
+	else
+		set_and_config_textures(gl, face_types, face_imgs);
+	return true;
+}
+
+function set_and_config_textures(gl, face_types, face_imgs) {
+		for(var i = 0; i < NUM_FACES; ++i)
+			gl.texImage2D(face_types[i], 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, face_imgs[i]);
+		if(isPowerOf2(face_imgs[0].width) && isPowerOf2(face_imgs[0].height))
+			gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+		else {
+			if(get_webgl_version() == 2)
+				gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+	}
+}
+
+function isPowerOf2(value) {
+	return (value & (value - 1)) == 0;
+}
+
 function getProgramInfo(gl, shaderProg) {
 	return {
 		program: shaderProg,
@@ -54,6 +152,7 @@ function getProgramInfo(gl, shaderProg) {
 			cameraPosition: gl.getUniformLocation(shaderProg, 'cameraPos'),
 			focalLength: gl.getUniformLocation(shaderProg, "focalLength"),
 			windowSize: gl.getUniformLocation(shaderProg, "windowSize"),
+			cubemap: gl.getUniformLocation(shaderProg, "envMap")
 		}
 	};
 }
@@ -141,5 +240,9 @@ function main() {
 	const shaderProg = initShaderProgram(gl, vsSrc, fsSrc);
 	const programInfo = getProgramInfo(gl, shaderProg);
 	const bufs = initBuffers(gl);
-	draw(gl, programInfo, bufs);
+	loadCubemap(gl).then(() => {
+		draw(gl, programInfo, bufs);
+	}, (err) => {
+		console.log(err || "Can't load textures!")
+	});
 }
