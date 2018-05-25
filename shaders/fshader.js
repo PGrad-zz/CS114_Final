@@ -4,6 +4,7 @@ const fsSrc = `
 	uniform vec3 cameraPos;
 	uniform float focalLength;
 	uniform vec2 windowSize;
+	uniform samplerCube envMap;
 	varying vec3 pos;
 	#define MIN_DIST .1
 	#define MAX_STEPS 64
@@ -46,10 +47,17 @@ const fsSrc = `
 	}
 	vec3 blinn_phong(vec3 n, vec3 l, vec3 eye) {
 		vec3 r = -reflect(l, n);
-		return vec3(0., 0., 1.) * pow(max(0., dot(r, eye)), SPECULAR_EXPONENT);
+		return vec3(1.) * pow(max(0., dot(r, eye)), SPECULAR_EXPONENT);
+	}
+	vec3 env_map(vec3 n, vec3 l, vec3 eye) {
+		vec3 r = -reflect(l, n);
+		return textureCube(envMap, r).rgb;
 	}
 	vec3 diffuse(vec3 n, vec3 l) {
 		return vec3(.7, .8, .4) * max(0., dot(n,l));
+	}
+	vec3 gamma_correct(vec3 col, float expon) {
+		return vec3(pow(col.r, expon), pow(col.g, expon), pow(col.b, expon));
 	}
 	void main() {
 		vec3 rd = getRd(gl_FragCoord.xy, 35.);
@@ -60,7 +68,12 @@ const fsSrc = `
 		vec3 n = getNormal(iXPos);
 		vec3 light = vec3(3.);
 		vec3 l = normalize(light - iXPos);
-		col *= blinn_phong(n, l, -rd) + diffuse(n, l) + .2;
+		col *= blinn_phong(n, l, -rd) + env_map(n, l, -rd) + 0.4;
+		vec3 back = textureCube(envMap, rd).rgb;
+		if(col.x == 0.)
+			col = back;
+		else
+			col = mix(back, col, .5);
 		gl_FragColor = vec4(col, 1.);
 	}
 `;
