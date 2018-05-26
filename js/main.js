@@ -73,8 +73,8 @@ function loadCubemap(gl) {
 	const texture = gl.createTexture();
 	const pixel = new Uint8Array([0, 0, 255, 255]);
 	load_cubemap_textures(gl, texture, null, pixel);
-	const img_path = "assets/skybox/mp_goldrush/";
-	const img_paths = ["goldrush_lf.png", "goldrush_rt.png", "goldrush_up.png", "goldrush_dn.png", "goldrush_ft.png", "goldrush_bk.png"].map(x => img_path + x);
+	const img_path = "assets/cubemap/"
+	const img_paths = ["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"].map(x => img_path + x);
 	let promises = [];
 	for(var i = 0; i < NUM_FACES; ++i)
 		promises.push(loadImg(img_paths[i]));
