@@ -77,8 +77,8 @@ const fsSrc = `
 		vec3 col = vec3(float(dist >= EPSILON));
 		vec3 iXPos = ro - rd * dist;
 		vec3 n = getNormal(iXPos);
-		vec3 toplight = vec3(0., 5., -4.);
-		vec3 bottomlight = vec3(0., -5., -3.);
+		vec3 toplight = vec3(0., 5., -4.) * view;
+		vec3 bottomlight = vec3(0., -5., -4.) * view;
 		vec3 topl = normalize(toplight - iXPos);
 		vec3 bottoml = normalize(bottomlight - iXPos);
 		vec3 highlights = blinn_phong(n, topl, -rd) + blinn_phong(n, bottoml, -rd);
