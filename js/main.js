@@ -18,6 +18,13 @@ function* wherestopper() {
 		yield webgl_versions[i];
 }
 
+function Time(start) {
+	var startTime = start;
+	this.getTime = () => {
+		return (new Date().getTime() - start) / 1000;
+	};
+}
+
 function get_webgl_version() {
 	if(webgl_version_wherestopper.next().value == "webgl")
 		return 2;
@@ -152,7 +159,8 @@ function getProgramInfo(gl, shaderProg) {
 			cameraPosition: gl.getUniformLocation(shaderProg, 'cameraPos'),
 			focalLength: gl.getUniformLocation(shaderProg, "focalLength"),
 			windowSize: gl.getUniformLocation(shaderProg, "windowSize"),
-			cubemap: gl.getUniformLocation(shaderProg, "envMap")
+			cubemap: gl.getUniformLocation(shaderProg, "envMap"),
+			time: gl.getUniformLocation(shaderProg, "time")
 		}
 	};
 }
@@ -217,6 +225,7 @@ function setUniforms(gl, programInfo, uniforms) {
 	gl.uniform3fv(programInfo.uniformLocations.cameraPosition, getCameraPos(uniforms.mvMatrix));
 	gl.uniform1f(programInfo.uniformLocations.focalLength, uniforms.focalLength);
 	gl.uniform2fv(programInfo.uniformLocations.windowSize, uniforms.windowSize);
+	gl.uniform1f(programInfo.uniformLocations.time, curtime.getTime());
 }
 
 function getCameraPos(mvMatrix) {
@@ -227,6 +236,15 @@ function getCameraPos(mvMatrix) {
 	return new Float32Array(translate);
 }
 
+function animate(gl, programInfo, bufs) {
+	let draw_frame = () => {
+		draw(gl, programInfo, bufs);
+		window.requestAnimationFrame(draw_frame);
+	};
+	window.requestAnimationFrame(draw_frame);
+}
+
+var curtime;
 function main() {
 	const gl = getGLContext();
 	if(!gl) {
@@ -241,7 +259,8 @@ function main() {
 	const programInfo = getProgramInfo(gl, shaderProg);
 	const bufs = initBuffers(gl);
 	loadCubemap(gl).then(() => {
-		draw(gl, programInfo, bufs);
+		curtime = new Time(new Date().getTime());
+		animate(gl, programInfo, bufs);
 	}, (err) => {
 		console.log(err || "Can't load textures!")
 	});
