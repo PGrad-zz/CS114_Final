@@ -37,7 +37,7 @@ const fsSrc = `
 		return max(minDist, (.2 - sumDensity) / (1.5 * sumRi));
 	}
 	float sceneSDF(vec3 p) {
-		return sphereSDF(p, vec3(1.), 1.);
+		return metaballSDF(p);
 	}
 	vec3 getRd(vec2 fragCoord, float fov) {
 		vec2 uv = 2. * fragCoord / windowSize - 1.;
