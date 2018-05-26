@@ -1,12 +1,15 @@
 const fsSrc = `
 	precision highp float;
+
 	uniform mat4 uMV;
 	uniform vec3 cameraPos;
 	uniform float focalLength;
 	uniform vec2 windowSize;
 	uniform samplerCube envMap;
 	uniform float time;
+
 	varying vec3 pos;
+
 	#define MIN_DIST .1
 	#define MAX_STEPS 64
 	#define PI 3.14159
@@ -14,10 +17,12 @@ const fsSrc = `
 	#define SPECULAR_EXPONENT 20.
 	#define FAR 100.
 	#define NUM_METABALLS 2
+
 	struct Ray {
 		vec3 ro;
 		vec3 rd;
 	};
+
 	float sphereSDF(vec3 p, vec3 c, float r) {
 		return length(p - c) - r;
 	}
@@ -25,7 +30,7 @@ const fsSrc = `
 		float sumDensity = 0.;
 		float sumRi = 0.;
 		float minDist = FAR;
-		vec3 centers[NUM_METABALLS]; centers[0] = vec3(0.); centers[1] = vec3(1.);
+		vec3 centers[NUM_METABALLS]; centers[0] = vec3(0.); centers[1] = vec3(1. + cos(time * .1));
 		float r = 0.;
 		for(int i = 0; i < NUM_METABALLS; ++i) {
 			r = length(centers[i] - p);
@@ -89,7 +94,8 @@ const fsSrc = `
 	}
 	void main() {
 		vec3 rd = getRd(gl_FragCoord.xy, 35.);
-		vec3 ro = -5. * vec3(cos(time), 0, sin(time));
+		float timestep = time * .5;
+		vec3 ro = -7. * vec3(sin(timestep), 0, cos(timestep));
 		mat3 view = lookAt(vec3(0.) - ro);
 		rd = view * rd;
 		float dist = raymarch(ro, rd);
@@ -97,8 +103,8 @@ const fsSrc = `
 		vec3 col = vec3(infore);
 		vec3 iXPos = ro + rd * dist;
 		vec3 n = getNormal(iXPos);
-		vec3 toplight = vec3(0., 5., -4.) * view;
-		vec3 bottomlight = vec3(0., -5., -4.) * view;
+		vec3 toplight = view * vec3(0., 5., 3.);
+		vec3 bottomlight = view * vec3(0., -5., 3.);
 		vec3 topl = normalize(toplight - iXPos);
 		vec3 bottoml = normalize(bottomlight - iXPos);
 		vec3 highlights = blinn_phong(n, topl, -rd) + blinn_phong(n, bottoml, -rd);
