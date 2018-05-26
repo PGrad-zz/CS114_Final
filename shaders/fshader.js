@@ -5,6 +5,7 @@ const fsSrc = `
 	uniform float focalLength;
 	uniform vec2 windowSize;
 	uniform samplerCube envMap;
+	uniform float time;
 	varying vec3 pos;
 	#define MIN_DIST .1
 	#define MAX_STEPS 64
@@ -49,8 +50,8 @@ const fsSrc = `
 		vec3 r = -reflect(l, n);
 		return vec3(1.) * pow(max(0., dot(r, eye)), SPECULAR_EXPONENT);
 	}
-	vec3 env_map(vec3 n, vec3 l, vec3 eye) {
-		vec3 r = -reflect(l, n);
+	vec3 env_map(vec3 n, vec3 eye) {
+		vec3 r = -reflect(eye, n);
 		return textureCube(envMap, r).rgb;
 	}
 	vec3 diffuse(vec3 n, vec3 l) {
@@ -59,21 +60,29 @@ const fsSrc = `
 	vec3 gamma_correct(vec3 col, float expon) {
 		return vec3(pow(col.r, expon), pow(col.g, expon), pow(col.b, expon));
 	}
+	mat3 lookAt(vec3 eye) {
+		vec3 strafe = cross(eye, vec3(0, 1, 0));
+		vec3 up = cross(strafe, eye);
+		mat3 view = mat3(0.);
+		return mat3(normalize(strafe),
+                normalize(up),
+		            normalize(eye));
+	}
 	void main() {
 		vec3 rd = getRd(gl_FragCoord.xy, 35.);
-		vec3 ro = vec3(0., 0., -5.);
+		vec3 ro = -5. * vec3(cos(time), 0, sin(time));
+		mat3 view = lookAt(vec3(0.) - ro);
+		rd = rd * view;
 		float dist = raymarch(ro, rd);
 		vec3 col = vec3(float(dist >= EPSILON));
 		vec3 iXPos = ro - rd * dist;
 		vec3 n = getNormal(iXPos);
 		vec3 toplight = vec3(0., 5., -4.);
-		vec3 centerlight = vec3(0., 0., 4.);
 		vec3 bottomlight = vec3(0., -5., -3.);
 		vec3 topl = normalize(toplight - iXPos);
-		vec3 centerl = normalize(centerlight - iXPos);
 		vec3 bottoml = normalize(bottomlight - iXPos);
 		vec3 highlights = blinn_phong(n, topl, -rd) + blinn_phong(n, bottoml, -rd);
-		col *= mix(highlights, env_map(n, centerl, -rd), .2) + 0.4;
+		col *= mix(highlights, env_map(n, -rd), .2) + 0.4;
 		vec3 back = textureCube(envMap, rd).rgb;
 		if(col.x == 0.)
 			col = back;
