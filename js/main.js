@@ -1,21 +1,33 @@
-const webgl_version_wherestopper = wherestopper();
+const glstate = new gl_state();
 function getGLContext() {
 	const canvas = document.querySelector("#glCanvas");
 	if(!canvas) {
 		console.log("Error getting canvas");
 		return undefined;
 	}
-	let gl = null;
-	for(var i = 0; i < 3; ++i)
-		if((gl = canvas.getContext(webgl_version_wherestopper.next().value)))
-			return gl;
-	return null;
+	return glstate.get_webgl_context(canvas);
 }
 
-const webgl_versions = ["webgl2", "webgl", "experimental-webgl"];
-function* wherestopper() {
-	for(var i = 0; i < 3; ++i)
-		yield webgl_versions[i];
+function gl_state() {
+	const webgl_versions = ["webgl2", "webgl", "experimental-webgl"];
+	function* wherestopper() {
+		for(var i = 0; i < 3; ++i)
+			yield webgl_versions[i];
+	}
+	const webgl_version_wherestopper = wherestopper();
+	function get_webgl_version() {
+		if(webgl_version_wherestopper.next().value == "webgl")
+			return 2;
+		if(webgl_version_wherestopper.next().value == "experimental-webgl")
+			return 1;
+		return 0;
+	}
+	this.get_webgl_context = (canvas) => {
+		for(var i = 0; i < 3; ++i)
+			if((gl = canvas.getContext(webgl_version_wherestopper.next().value)))
+				return gl;
+		return null;
+	}
 }
 
 function Time(start) {
@@ -25,13 +37,6 @@ function Time(start) {
 	};
 }
 
-function get_webgl_version() {
-	if(webgl_version_wherestopper.next().value == "webgl")
-		return 2;
-	if(webgl_version_wherestopper.next().value == "experimental-webgl")
-		return 1;
-	return 0;
-}
 
 function initShaderProgram(gl, vsSrc, fsSrc) {
 	const vShader = loadShader(gl, gl.VERTEX_SHADER, vsSrc);
@@ -136,7 +141,7 @@ function set_and_config_textures(gl, face_types, face_imgs) {
 		if(isPowerOf2(face_imgs[0].width) && isPowerOf2(face_imgs[0].height))
 			gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
 		else {
-			if(get_webgl_version() == 2)
+			if(glstate.get_webgl_version() == 2)
 				gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
 			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
