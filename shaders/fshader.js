@@ -9,6 +9,11 @@ const fsSrc = `
 	uniform float time;
 
 	varying vec3 pos;
+	struct obj_props {
+		float dist;
+		vec4 color;
+		int type;
+	};
 
 	#define MIN_DIST .05
 	#define MAX_STEPS 64
@@ -18,15 +23,28 @@ const fsSrc = `
 	#define FAR 100.
 	#define NUM_METABALLS 2
 	#define ISOPOTENTIAL .4
+	#define NULL_COL vec4(0)
+	#define BOX_COL vec4(.7, .5, .2, 1)
+	#define BUBBLE_COL vec4(vec3(1.), .2)
+	vec3 get_highlights(vec3 n, vec3 iXPos, vec3 rd, mat3 view);
 
-	vec2 intersect(vec2 a, vec2 b) {
-		return a.x > b.x ? a : b;
+	obj_props intersect(obj_props a, obj_props b) {
+		if(a.dist > b.dist)
+			return a;
+		else
+			return b;
 	}
-	vec2 _union(vec2 a, vec2 b) {
-		return a.x < b.x ? a : b;
+	obj_props _union(obj_props a, obj_props b) {
+		if(a.dist < b.dist)
+			return a;
+		else
+			return b;
 	}
-	vec2 diff(vec2 a, vec2 b) {
-		return a.x > -b.x ? a : b;
+	obj_props diff(obj_props a, obj_props b) {
+		if(a.dist > -b.dist)
+			return a;
+		else
+			return b;
 	}
 	float sphereSDF(vec3 p, vec3 c, float r) {
 		return length(p - c) - r;
@@ -50,18 +68,15 @@ const fsSrc = `
 	float roundBoxSDF(vec3 p, vec3 b, float r) {
 		return length(max(abs(p) - b, 0.)) - r;
 	}
-	vec2 idShape(float dist, int id) {
-		return vec2(dist, id);
-	}
-	vec2 sceneSDF(vec3 p) {
-		vec2 box = idShape(roundBoxSDF(p, vec3(1.5), .1), 1);
-		vec2 horiz = idShape(roundBoxSDF(p, vec3(1.6, 1., 1.), .1), -1);
-		vec2 vert = idShape(roundBoxSDF(p, vec3(1., 1.6, 1.), .1), -1);
-		vec2 zed = idShape(roundBoxSDF(p, vec3(1., 1., 1.6), .1), -1);
-		vec2 mergebox = diff(diff(diff(box, horiz), vert), zed);
-		vec2 bubble_bounds = idShape(roundBoxSDF(p, vec3(1), .1), -1);
-		if(mergebox.y == -1.)
-			return idShape(metaballSDF(p), 0);
+	obj_props sceneSDF(vec3 p) {
+		obj_props box = obj_props(roundBoxSDF(p, vec3(1.5), .1), BOX_COL, 0);
+		obj_props horiz = obj_props(roundBoxSDF(p, vec3(1.6, 1., 1.), .1), NULL_COL, -1);
+		obj_props vert = obj_props(roundBoxSDF(p, vec3(1., 1.6, 1.), .1), NULL_COL, -1);
+		obj_props zed = obj_props(roundBoxSDF(p, vec3(1., 1., 1.6), .1), NULL_COL, -1);
+		obj_props mergebox = diff(diff(diff(box, horiz), vert), zed);
+		obj_props bubble_bounds = obj_props(roundBoxSDF(p, vec3(1), .1), NULL_COL, -1);
+		if(mergebox.type == -1)
+			return obj_props(metaballSDF(p), BUBBLE_COL, 1);
 		return mergebox;
 	}
 	vec3 getRd(vec2 fragCoord, float fov) {
@@ -70,24 +85,12 @@ const fsSrc = `
 		float focal = 1. / tan(fov / 2.);
 		return normalize(vec3(uv, focal));
 	}
-	vec2 raymarch(vec3 ro, vec3 rd) {
-		float dist = MIN_DIST;
-		vec2 objID = vec2(0.);
-		for(int i = 0; i < MAX_STEPS; ++i) {
-			if(dist > FAR)
-				break;
-			if((objID = sceneSDF(ro + rd * dist)).x <= EPSILON)
-				return vec2(dist, objID.y);
-			dist += objID.x;
-		}
-		return vec2(dist, -1);
-	}
 	vec3 getNormal(vec3 iXPos) {
 		vec2 diff = vec2(EPSILON, 0.);
 		return normalize(vec3(
-		                 sceneSDF(iXPos + diff.xyy).x - sceneSDF(iXPos - diff.xyy).x,
-		                 sceneSDF(iXPos + diff.yxy).x - sceneSDF(iXPos - diff.yxy).x,
-		                 sceneSDF(iXPos + diff.yyx).x - sceneSDF(iXPos - diff.yyx).x
+		                 sceneSDF(iXPos + diff.xyy).dist - sceneSDF(iXPos - diff.xyy).dist,
+		                 sceneSDF(iXPos + diff.yxy).dist - sceneSDF(iXPos - diff.yxy).dist,
+		                 sceneSDF(iXPos + diff.yyx).dist - sceneSDF(iXPos - diff.yyx).dist
 		       ));
 	}
 	vec3 blinn_phong(vec3 n, vec3 l, vec3 eye) {
@@ -101,6 +104,30 @@ const fsSrc = `
 	vec3 diffuse(vec3 n, vec3 l) {
 		return vec3(.7, .8, .4) * max(0., dot(n,l));
 	}
+	vec4 calc_color(vec3 ro, vec3 rd, obj_props props, mat3 view) {
+		vec3 col = props.color.rgb;
+		vec3 iXPos = ro + rd * props.dist;
+		vec3 n = getNormal(iXPos);
+		vec3 highlights = get_highlights(n, iXPos, rd, view);
+		if(props.type == 1)
+			col *= mix(highlights, env_map(n, -rd), .2) + 0.4;
+		else
+			col *= diffuse(n, -rd) + highlights;
+		return vec4(col, 1);
+	}
+	vec4 raymarch(vec3 ro, vec3 rd, mat3 view) {
+		float dist = MIN_DIST;
+		obj_props oprops;
+		vec4 color = vec4(0);
+		for(int i = 0; i < MAX_STEPS; ++i) {
+			if(dist > FAR)
+				break;
+			if((oprops = sceneSDF(ro + rd * dist)).dist <= EPSILON)
+				return calc_color(ro, rd, oprops, view);
+			dist += oprops.dist;
+		}
+		return vec4(textureCube(envMap, -rd));
+	}
 	vec3 gamma_correct(vec3 col, float expon) {
 		return vec3(pow(col.r, expon), pow(col.g, expon), pow(col.b, expon));
 	}
@@ -112,33 +139,31 @@ const fsSrc = `
                 normalize(up),
 		            normalize(eye));
 	}
-	void main() {
-		vec3 rd = getRd(gl_FragCoord.xy, 35.);
-		float timestep = time * .5;
-		vec3 ro = -7. * vec3(sin(timestep), 0, cos(timestep));
-		mat3 view = lookAt(vec3(0.) - ro);
-		rd = view * rd;
-		vec2 objID = raymarch(ro, rd);
-		float dist = objID.x;
-		float type = objID.y;
-		float infore = float(dist <= FAR) * float(type >= 0.);
-		float isbox = float(type > 0.);
-		vec3 col = (1. - isbox) * vec3(infore) + isbox * vec3(.7, .5, .2);
-		vec3 iXPos = ro + rd * dist;
-		vec3 n = getNormal(iXPos);
+	vec3 get_highlights(vec3 n, vec3 iXPos, vec3 rd, mat3 view) {
 		vec3 toplight = view * vec3(0., 5., 3.);
 		vec3 bottomlight = view * vec3(0., -5., 3.);
 		vec3 topl = normalize(toplight - iXPos);
 		vec3 bottoml = normalize(bottomlight - iXPos);
-		vec3 highlights = blinn_phong(n, topl, -rd) + blinn_phong(n, bottoml, -rd) + blinn_phong(n, -rd, -rd);
-		vec3 back = textureCube(envMap, rd).rgb;
-		if(type == 0.) {
-			col *= mix(highlights, env_map(n, -rd), .2) + 0.4;
-			col = (1. - infore) * back + infore * mix(back, col, .5);
-		} else {
-			col *= diffuse(n, -rd) + highlights;
-			col = (1. - infore) * back + infore * col;
-		}
-		gl_FragColor = vec4(col, 1.);
+		return blinn_phong(n, topl, -rd) + blinn_phong(n, bottoml, -rd) + blinn_phong(n, -rd, -rd);
+	}
+	void main() {
+		float timestep = time * .5;
+		vec3 ro = -7. * vec3(sin(timestep), 0, cos(timestep));
+		mat3 view = lookAt(vec3(0.) - ro);
+		vec3 rd = view * getRd(gl_FragCoord.xy, 35.);
+		vec4 color = raymarch(ro, rd, view);
+//		float dist = objID.x;
+//		float type = objID.y;
+//		float infore = float(dist <= FAR) * float(type >= 0.);
+//		float isbox = float(type > 0.);
+//		vec3 col = (1. - isbox) * vec3(infore) + isbox * ;
+//		if(type == 0.) {
+//			col *= mix(highlights, env_map(n, -rd), .2) + 0.4;
+//			col = (1. - infore) * back + infore * mix(back, col, .5);
+//		} else {
+//			col *= diffuse(n, -rd) + highlights;
+//			col = (1. - infore) * back + infore * col;
+//		}
+		gl_FragColor = color;
 	}
 `;
