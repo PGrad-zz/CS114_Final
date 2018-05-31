@@ -17,7 +17,7 @@ const fsSrc = `
 	#define SPECULAR_EXPONENT 20.
 	#define FAR 100.
 	#define NUM_METABALLS 2
-	#define ISOPOTENTIAL .8
+	#define ISOPOTENTIAL .4
 
 	vec2 intersect(vec2 a, vec2 b) {
 		return a.x > b.x ? a : b;
@@ -36,13 +36,13 @@ const fsSrc = `
 		float sumRi = 0.;
 		float minDist = FAR;
 		vec3 centers[NUM_METABALLS]; centers[0] = vec3(0.); centers[1] = vec3(cos(time * .5));
-		float radii[NUM_METABALLS]; radii[0] = 1.; radii[1] = 1.;
+		float radii[NUM_METABALLS]; radii[0] = .5; radii[1] = .5;
 		float r = 0.;
 		for(int i = 0; i < NUM_METABALLS; ++i) {
 			r = length(centers[i] - p);
-			if(r <= 1.)
+			if(r <= radii[i])
 				sumDensity += 2. * (r * r * r) / (radii[i] * radii[i] * radii[i]) - 3. * (r * r) / (radii[i] * radii[i]) + 1.;
-			minDist = min(minDist, r - 1.);
+			minDist = min(minDist, r - radii[i]);
 			sumRi += 1.;
 		}
 		return max(minDist, (ISOPOTENTIAL - sumDensity) / (1.5 * sumRi));
@@ -59,6 +59,7 @@ const fsSrc = `
 		vec2 vert = idShape(roundBoxSDF(p, vec3(1., 1.6, 1.), .1), -1);
 		vec2 zed = idShape(roundBoxSDF(p, vec3(1., 1., 1.6), .1), -1);
 		vec2 mergebox = diff(diff(diff(box, horiz), vert), zed);
+		vec2 bubble_bounds = idShape(roundBoxSDF(p, vec3(1), .1), -1);
 		if(mergebox.y == -1.)
 			return idShape(metaballSDF(p), 0);
 		return mergebox;
