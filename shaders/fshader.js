@@ -25,7 +25,7 @@ const fsSrc = `
 	#define ISOPOTENTIAL .4
 	#define NULL_COL vec4(0)
 	#define BOX_COL vec4(.7, .5, .2, 1)
-	#define BUBBLE_COL vec4(vec3(1.), .2)
+	#define BUBBLE_COL vec4(1)
 	vec3 get_highlights(vec3 n, vec3 iXPos, vec3 rd, mat3 view);
 
 	obj_props intersect(obj_props a, obj_props b) {
@@ -104,29 +104,33 @@ const fsSrc = `
 	vec3 diffuse(vec3 n, vec3 l) {
 		return vec3(.7, .8, .4) * max(0., dot(n,l));
 	}
-	vec4 calc_color(vec3 ro, vec3 rd, obj_props props, mat3 view) {
+	vec4 calc_color(vec3 ro, vec3 rd, float dist, obj_props props, mat3 view) {
 		vec3 col = props.color.rgb;
-		vec3 iXPos = ro + rd * props.dist;
+		vec3 iXPos = ro + rd * dist;
 		vec3 n = getNormal(iXPos);
 		vec3 highlights = get_highlights(n, iXPos, rd, view);
-		if(props.type == 1)
+		vec3 back = textureCube(envMap, rd).rgb;
+		if(props.type == 1) {
 			col *= mix(highlights, env_map(n, -rd), .2) + 0.4;
-		else
+			col = mix(back, col, .5);
+		} else
 			col *= diffuse(n, -rd) + highlights;
 		return vec4(col, 1);
 	}
 	vec4 raymarch(vec3 ro, vec3 rd, mat3 view) {
 		float dist = MIN_DIST;
 		obj_props oprops;
-		vec4 color = vec4(0);
+		vec4 color = vec4(textureCube(envMap, -rd));
 		for(int i = 0; i < MAX_STEPS; ++i) {
 			if(dist > FAR)
 				break;
-			if((oprops = sceneSDF(ro + rd * dist)).dist <= EPSILON)
-				return calc_color(ro, rd, oprops, view);
+			if((oprops = sceneSDF(ro + rd * dist)).dist <= EPSILON) {
+				color = calc_color(ro, rd, dist, oprops, view);
+				break;
+			}
 			dist += oprops.dist;
 		}
-		return vec4(textureCube(envMap, -rd));
+		return color;
 	}
 	vec3 gamma_correct(vec3 col, float expon) {
 		return vec3(pow(col.r, expon), pow(col.g, expon), pow(col.b, expon));
@@ -152,18 +156,6 @@ const fsSrc = `
 		mat3 view = lookAt(vec3(0.) - ro);
 		vec3 rd = view * getRd(gl_FragCoord.xy, 35.);
 		vec4 color = raymarch(ro, rd, view);
-//		float dist = objID.x;
-//		float type = objID.y;
-//		float infore = float(dist <= FAR) * float(type >= 0.);
-//		float isbox = float(type > 0.);
-//		vec3 col = (1. - isbox) * vec3(infore) + isbox * ;
-//		if(type == 0.) {
-//			col *= mix(highlights, env_map(n, -rd), .2) + 0.4;
-//			col = (1. - infore) * back + infore * mix(back, col, .5);
-//		} else {
-//			col *= diffuse(n, -rd) + highlights;
-//			col = (1. - infore) * back + infore * col;
-//		}
 		gl_FragColor = color;
 	}
 `;
