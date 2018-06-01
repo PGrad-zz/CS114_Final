@@ -22,29 +22,33 @@ const fsSrc = `
 	#define SPECULAR_EXPONENT 20.
 	#define FAR 100.
 	#define NUM_METABALLS 2
-	#define ISOPOTENTIAL .4
+	#define ISOPOTENTIAL .8
 	#define NULL_COL vec4(0)
 	#define BOX_COL vec4(.7, .5, .2, 1)
-	#define BUBBLE_COL vec4(1)
+	#define BUBBLE_COL vec4(vec3(1.), .8)
+	#define BUBBLE_RADIUS 1.
+	#define SIDE 1.5
 	vec3 get_highlights(vec3 n, vec3 iXPos, vec3 rd, mat3 view);
 
 	obj_props intersect(obj_props a, obj_props b) {
+		obj_props o;
 		if(a.dist > b.dist)
-			return a;
+			o = a;
 		else
-			return b;
+			o = b;
+		return o;
 	}
 	obj_props _union(obj_props a, obj_props b) {
+		obj_props o;
 		if(a.dist < b.dist)
-			return a;
+			o = a;
 		else
-			return b;
+			o = b;
+		return o;
 	}
 	obj_props diff(obj_props a, obj_props b) {
-		if(a.dist > -b.dist)
-			return a;
-		else
-			return b;
+		obj_props diff_prop = obj_props(-b.dist, a.color, a.type);
+		return intersect(a, diff_prop);
 	}
 	float sphereSDF(vec3 p, vec3 c, float r) {
 		return length(p - c) - r;
@@ -54,30 +58,29 @@ const fsSrc = `
 		float sumRi = 0.;
 		float minDist = FAR;
 		vec3 centers[NUM_METABALLS]; centers[0] = vec3(0.); centers[1] = vec3(cos(time * .5));
-		float radii[NUM_METABALLS]; radii[0] = .5; radii[1] = .5;
+		float radii[NUM_METABALLS]; radii[0] = BUBBLE_RADIUS; radii[1] = BUBBLE_RADIUS;
 		float r = 0.;
 		for(int i = 0; i < NUM_METABALLS; ++i) {
 			r = length(centers[i] - p);
 			if(r <= radii[i])
 				sumDensity += 2. * (r * r * r) / (radii[i] * radii[i] * radii[i]) - 3. * (r * r) / (radii[i] * radii[i]) + 1.;
-			minDist = min(minDist, r - radii[i]);
-			sumRi += 1.;
+			minDist = min(minDist, (r - radii[i]));
+			sumRi += BUBBLE_RADIUS;
 		}
 		return max(minDist, (ISOPOTENTIAL - sumDensity) / (1.5 * sumRi));
 	}
 	float roundBoxSDF(vec3 p, vec3 b, float r) {
 		return length(max(abs(p) - b, 0.)) - r;
 	}
+	int firsthit = 0;
 	obj_props sceneSDF(vec3 p) {
-		obj_props box = obj_props(roundBoxSDF(p, vec3(1.5), .1), BOX_COL, 0);
-		obj_props horiz = obj_props(roundBoxSDF(p, vec3(1.6, 1., 1.), .1), NULL_COL, -1);
-		obj_props vert = obj_props(roundBoxSDF(p, vec3(1., 1.6, 1.), .1), NULL_COL, -1);
-		obj_props zed = obj_props(roundBoxSDF(p, vec3(1., 1., 1.6), .1), NULL_COL, -1);
+		obj_props box = obj_props(roundBoxSDF(p, vec3(SIDE), .1), BOX_COL, 0);
+		obj_props horiz = obj_props(roundBoxSDF(p, vec3(1.6, 1.3, 1.3), .1), NULL_COL, -1);
+		obj_props vert = obj_props(roundBoxSDF(p, vec3(1.3, 1.6, 1.3), .1), NULL_COL, -1);
+		obj_props zed = obj_props(roundBoxSDF(p, vec3(1.3, 1.3, 1.6), .1), NULL_COL, -1);
 		obj_props mergebox = diff(diff(diff(box, horiz), vert), zed);
-		obj_props bubble_bounds = obj_props(roundBoxSDF(p, vec3(1), .1), NULL_COL, -1);
-		if(mergebox.type == -1)
-			return obj_props(metaballSDF(p), BUBBLE_COL, 1);
-		return mergebox;
+		mergebox.dist += float(firsthit) * .2 * mergebox.dist;
+		return _union(obj_props(metaballSDF(p), BUBBLE_COL, 1), mergebox);
 	}
 	vec3 getRd(vec2 fragCoord, float fov) {
 		vec2 uv = 2. * fragCoord / windowSize - 1.;
@@ -106,31 +109,45 @@ const fsSrc = `
 	}
 	vec4 calc_color(vec3 ro, vec3 rd, float dist, obj_props props, mat3 view) {
 		vec3 col = props.color.rgb;
+		float alpha = props.color.a;
 		vec3 iXPos = ro + rd * dist;
 		vec3 n = getNormal(iXPos);
 		vec3 highlights = get_highlights(n, iXPos, rd, view);
 		vec3 back = textureCube(envMap, rd).rgb;
-		if(props.type == 1) {
+		if(props.type == 1)
 			col *= mix(highlights, env_map(n, -rd), .2) + 0.4;
-			col = mix(back, col, .5);
-		} else
+		else
 			col *= diffuse(n, -rd) + highlights;
-		return vec4(col, 1);
+		return vec4(col, alpha);
+	}
+	struct col_blend {
+		vec4 color;
+		float alpha;
+	};
+	col_blend blend(vec4 dest, vec4 src, float alpha) {
+		dest += src * (1. - alpha);
+		alpha += src.a * (1. - alpha);
+		return col_blend(dest, alpha);
 	}
 	vec4 raymarch(vec3 ro, vec3 rd, mat3 view) {
 		float dist = MIN_DIST;
 		obj_props oprops;
-		vec4 color = vec4(textureCube(envMap, -rd));
+		vec4 color = vec4(0.);
+		col_blend cb = col_blend(vec4(0.), 0.);
 		for(int i = 0; i < MAX_STEPS; ++i) {
 			if(dist > FAR)
 				break;
-			if((oprops = sceneSDF(ro + rd * dist)).dist <= EPSILON) {
+			oprops = sceneSDF((ro + rd * dist));
+			if(oprops.dist <= EPSILON) {
 				color = calc_color(ro, rd, dist, oprops, view);
-				break;
+				cb = blend(cb.color, color, cb.alpha);
+				if(oprops.type == 1)
+					dist += BUBBLE_RADIUS * 1.1;
 			}
 			dist += oprops.dist;
+			firsthit = 1;
 		}
-		return color;
+		return blend(cb.color, textureCube(envMap, rd), cb.alpha).color;
 	}
 	vec3 gamma_correct(vec3 col, float expon) {
 		return vec3(pow(col.r, expon), pow(col.g, expon), pow(col.b, expon));
