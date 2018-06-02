@@ -28,11 +28,13 @@ const fsSrc = `
 	#define BOX_COL vec4(.7, .5, .2, 1)
 	#define BUBBLE_COL vec4(vec3(1.), .8)
 	#define BUBBLE_RADIUS 1.
+	#define GLASS_RADIUS .3
 	#define SIDE 1.5
 
 	vec3 get_highlights(vec3 n, vec3 iXPos, vec3 rd, mat3 view);
 	vec4 raymarch(vec3 ro, vec3 rd, mat3 view);
 	vec4 raymarch2(vec3 ro, vec3 rd, mat3 view);
+	vec4 raymarch3(vec3 ro, vec3 rd, mat3 view);
 
 	obj_props intersect(obj_props a, obj_props b) {
 		obj_props o;
@@ -82,7 +84,7 @@ const fsSrc = `
 		obj_props horiz = obj_props(roundBoxSDF(p, vec3(1.6, 1.3, 1.3), .1), NULL_COL, -1, -1.);
 		obj_props vert = obj_props(roundBoxSDF(p, vec3(1.3, 1.6, 1.3), .1), NULL_COL, -1, -1.);
 		obj_props zed = obj_props(roundBoxSDF(p, vec3(1.3, 1.3, 1.6), .1), NULL_COL, -1, -1.);
-		obj_props glass_sphere = obj_props(sphereSDF(p, vec3(-.5, .5, .5), .3), BUBBLE_COL, 2, 1.517);
+		obj_props glass_sphere = obj_props(sphereSDF(p, vec3(-.7, .7, .7), GLASS_RADIUS), BUBBLE_COL, 2, 1.117);
 		obj_props mergebox = diff(diff(diff(box, horiz), vert), zed);
 		mergebox.dist += float(firsthit) * .2 * mergebox.dist;
 		return _union(_union(obj_props(metaballSDF(p), BUBBLE_COL, 1, 1.33), mergebox), glass_sphere);
@@ -101,9 +103,10 @@ const fsSrc = `
 		                 sceneSDF(iXPos + diff.yyx).dist - sceneSDF(iXPos - diff.yyx).dist
 		       ));
 	}
-	vec3 blinn_phong(vec3 n, vec3 l, vec3 eye) {
+	vec3 phong(vec3 n, vec3 l, vec3 eye) {
+		vec3 h = normalize(l + eye);
 		vec3 r = -reflect(l, n);
-		return vec3(1.) * pow(max(0., dot(r, eye)), SPECULAR_EXPONENT);
+		return vec3(pow(max(0., dot(r, eye)), SPECULAR_EXPONENT));
 	}
 	vec3 env_map(vec3 n, vec3 eye, vec3 iXPos, mat3 view) {
 		vec3 r = -reflect(eye, n);
@@ -119,9 +122,10 @@ const fsSrc = `
 		vec3 n = getNormal(iXPos);
 		vec3 highlights = get_highlights(n, iXPos, rd, view);
 		vec3 back = textureCube(envMap, rd).rgb;
-		float ambient = props.type == 1 ? 0. : .2;
-		if(props.type == 1 || props.type == 2)
-			col *= mix(highlights, env_map(n, -rd, iXPos, view), .2) + ambient;
+		if(props.type == 1)
+			col *= mix(highlights, env_map(n, -rd, iXPos, view), .2);
+		else if(props.type == 2)
+			col *= highlights + env_map(n, -rd, iXPos, view);
 		else
 			col *= diffuse(n, -rd) + highlights;
 		return vec4(col, alpha);
@@ -138,6 +142,7 @@ const fsSrc = `
 		Rparl *= Rparl;
 		return sin(ndoti) <= (n2 / n1) ? ((Rperp + Rparl) / 2.) : 1.;
 	}
+	int in_glass = 0;
 	vec4 raymarch(vec3 ro, vec3 rd, mat3 view) {
 		float dist = MIN_DIST;
 		obj_props oprops;
@@ -151,15 +156,27 @@ const fsSrc = `
 			oprops = sceneSDF((ro + rd * dist));
 			if(oprops.dist <= EPSILON) {
 				color = calc_color(ro, rd, dist, oprops, view);
+				n = getNormal(ro + rd * dist);
 				if(oprops.type == 1) {
-					n = getNormal(ro + rd * dist);
 					dist += BUBBLE_RADIUS * 1.1;
+					color.a = get_reflect_alpha(n, rd, rd, 1., oprops.n);
+				}
+				if(oprops.type == 2) {
+					dist += GLASS_RADIUS * 1.1;
 					oldrd = rd;
-					if(oprops.type == 2)
+					if(in_glass == 1) {
+						rd = refract(rd, -n, 1. / oprops.n);
+						color.a = get_reflect_alpha(n, oldrd, rd, oprops.n, 1.);
+						in_glass = 0;
+					} else {
 						rd = refract(rd, n, oprops.n);
-					color.a = get_reflect_alpha(n, oldrd, rd, 1., oprops.n);
+						color.a = get_reflect_alpha(n, oldrd, rd, 1., oprops.n);
+						in_glass = 1;
+					}
 				}
 				cb = over(cb, color);
+				if(color.a == 1.)
+					break;
 			}
 			dist += abs(oprops.dist);
 			firsthit = 1;
@@ -182,7 +199,7 @@ const fsSrc = `
 		vec3 bottomlight = view * vec3(0., -5., 3.);
 		vec3 topl = normalize(toplight - iXPos);
 		vec3 bottoml = normalize(bottomlight - iXPos);
-		return blinn_phong(n, topl, -rd) + blinn_phong(n, bottoml, -rd) + blinn_phong(n, -rd, -rd);
+		return phong(n, topl, -rd) + phong(n, bottoml, -rd) + phong(n, -rd, -rd);
 	}
 	vec3 env_map2(vec3 n, vec3 eye, vec3 iXPos, mat3 view) {
 		vec3 r = -reflect(eye, n);
@@ -202,6 +219,7 @@ const fsSrc = `
 			col *= diffuse(n, -rd) + highlights;
 		return vec4(col, alpha);
 	}
+	int in_glass2 = 0;
 	vec4 raymarch2(vec3 ro, vec3 rd, mat3 view) {
 		float dist = MIN_DIST;
 		obj_props oprops;
@@ -215,15 +233,27 @@ const fsSrc = `
 			oprops = sceneSDF((ro + rd * dist));
 			if(oprops.dist <= EPSILON) {
 				color = calc_color2(ro, rd, dist, oprops, view);
+				n = getNormal(ro + rd * dist);
 				if(oprops.type == 1) {
-					n = getNormal(ro + rd * dist);
 					dist += BUBBLE_RADIUS * 1.1;
+					color.a = get_reflect_alpha(n, rd, rd, 1., oprops.n);
+				}
+				if(oprops.type == 2) {
+					dist += GLASS_RADIUS * 1.1;
 					oldrd = rd;
-					if(oprops.type == 2)
+					if(in_glass == 1) {
+						rd = refract(rd, -n, 1. / oprops.n);
+						color.a = get_reflect_alpha(n, oldrd, rd, oprops.n, 1.);
+						in_glass = 0;
+					} else {
 						rd = refract(rd, n, oprops.n);
-					color.a = get_reflect_alpha(n, oldrd, rd, 1., oprops.n);
+						color.a = get_reflect_alpha(n, oldrd, rd, 1., oprops.n);
+						in_glass = 1;
+					}
 				}
 				cb = over(cb, color);
+				if(color.a == 1.)
+					break;
 			}
 			dist += abs(oprops.dist);
 			firsthit = 1;
