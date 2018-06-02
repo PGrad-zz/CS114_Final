@@ -29,6 +29,7 @@ const fsSrc = `
 	#define BUBBLE_COL vec4(vec3(1.), .8)
 	#define BUBBLE_RADIUS 1.
 	#define GLASS_RADIUS .3
+	#define GLASS_N 1.117
 	#define SIDE 1.5
 
 	vec3 get_highlights(vec3 n, vec3 iXPos, vec3 rd, mat3 view);
@@ -80,14 +81,15 @@ const fsSrc = `
 	}
 	int firsthit = 0;
 	obj_props sceneSDF(vec3 p) {
-		obj_props box = obj_props(roundBoxSDF(p, vec3(SIDE), .1), BOX_COL, 0, 0.);
+		obj_props box = obj_props(roundBoxSDF(p, vec3(SIDE), .1), BOX_COL, 0, .239);
 		obj_props horiz = obj_props(roundBoxSDF(p, vec3(1.6, 1.3, 1.3), .1), NULL_COL, -1, -1.);
 		obj_props vert = obj_props(roundBoxSDF(p, vec3(1.3, 1.6, 1.3), .1), NULL_COL, -1, -1.);
 		obj_props zed = obj_props(roundBoxSDF(p, vec3(1.3, 1.3, 1.6), .1), NULL_COL, -1, -1.);
-		obj_props glass_sphere = obj_props(sphereSDF(p, vec3(-.7, .7, .7), GLASS_RADIUS), BUBBLE_COL, 2, 1.517);
+		obj_props glass_sphere = obj_props(sphereSDF(p, vec3(-.7, .7, .7), GLASS_RADIUS), BUBBLE_COL, 2, GLASS_N);
 		obj_props mergebox = diff(diff(diff(box, horiz), vert), zed);
 		mergebox.dist += float(firsthit) * .2 * mergebox.dist;
-		return _union(_union(obj_props(metaballSDF(p), BUBBLE_COL, 1, 1.33), mergebox), glass_sphere);
+		obj_props metaballs = obj_props(metaballSDF(p), BUBBLE_COL, 1, 1.33);
+		return _union(_union(metaballs, mergebox), glass_sphere);
 	}
 	vec3 getRd(vec2 fragCoord, float fov) {
 		vec2 uv = 2. * fragCoord / windowSize - 1.;
@@ -122,16 +124,17 @@ const fsSrc = `
 		vec3 n = getNormal(iXPos);
 		vec3 highlights = get_highlights(n, iXPos, rd, view);
 		vec3 back = textureCube(envMap, rd).rgb;
-		if(props.type == 1)
-			col *= mix(highlights, env_map(n, -rd, iXPos, view), .2);
-		else if(props.type == 2)
+		if(props.type == 1) {
+			col *= highlights + .2 * env_map(n, -rd, iXPos, view);
+		} else if(props.type == 2)
 			col *= highlights + env_map(n, -rd, iXPos, view);
 		else
 			col *= diffuse(n, -rd) + highlights;
+		col = clamp(col, 0., .9);
 		return vec4(col, alpha);
 	}
 	vec4 over(vec4 dest, vec4 src) {
-		return dest + src * (1. - dest.a);
+		return src * src.a + dest * (1. - src.a);
 	}
 	float get_reflect_alpha(vec3 n, vec3 i, vec3 t, float n1, float n2) {
 		float ndoti = dot(n, -i);
@@ -142,7 +145,6 @@ const fsSrc = `
 		Rparl *= Rparl;
 		return sin(ndoti) <= (n2 / n1) ? ((Rperp + Rparl) / 2.) : 1.;
 	}
-	int in_glass = 0;
 	vec4 raymarch(vec3 ro, vec3 rd, mat3 view) {
 		float dist = MIN_DIST;
 		obj_props oprops;
@@ -150,6 +152,7 @@ const fsSrc = `
 		vec4 cb = vec4(0);
 		vec3 n = vec3(0);
 		vec3 oldrd = vec3(0.);
+		int hit = 0;
 		for(int i = 0; i < MAX_STEPS; ++i) {
 			if(dist > FAR)
 				break;
@@ -159,31 +162,20 @@ const fsSrc = `
 				n = getNormal(ro + rd * dist);
 				if(oprops.type == 1) {
 					dist += BUBBLE_RADIUS * 1.1;
-					color.a = get_reflect_alpha(n, rd, rd, 1., oprops.n);
+					color.a = .5;
 				}
 				if(oprops.type == 2) {
-					dist += GLASS_RADIUS * 1.1;
+					dist += GLASS_RADIUS * 2.1;
 					oldrd = rd;
-					if(in_glass == 1) {
-						rd = refract(rd, -n, 1. / oprops.n);
-						color.a = get_reflect_alpha(n, oldrd, rd, oprops.n, 1.);
-						in_glass = 0;
-					} else {
-						rd = refract(rd, n, oprops.n);
-						color.a = get_reflect_alpha(n, oldrd, rd, 1., oprops.n);
-						if(color.a > (1. - EPSILON))
-							color.rgb *= 2.;
-						in_glass = 1;
-					}
+					rd = refract(rd, n, oprops.n);
+					color.a = get_reflect_alpha(n, oldrd, rd, 1., oprops.n);
 				}
-				cb = over(cb, color);
-				if(color.a == 1.)
-					break;
+				cb = over(color, cb);
 			}
 			dist += abs(oprops.dist);
 			firsthit = 1;
 		}
-		return over(cb, textureCube(envMap, rd));
+		return over(textureCube(envMap, rd), cb);
 	}
 	vec3 gamma_correct(vec3 col, float expon) {
 		return vec3(pow(col.r, expon), pow(col.g, expon), pow(col.b, expon));
@@ -214,14 +206,15 @@ const fsSrc = `
 		vec3 n = getNormal(iXPos);
 		vec3 highlights = get_highlights(n, iXPos, rd, view);
 		vec3 back = textureCube(envMap, rd).rgb;
-		float ambient = props.type == 1 ? 0. : .2;
-		if(props.type == 1 || props.type == 2)
-			col *= mix(highlights, env_map2(n, -rd, iXPos, view), .2) + ambient;
+		if(props.type == 1) {
+			col *= highlights + env_map2(n, -rd, iXPos, view);
+		} else if(props.type == 2)
+			col *= highlights + env_map2(n, -rd, iXPos, view);
 		else
 			col *= diffuse(n, -rd) + highlights;
+		col = clamp(col, 0., .9);
 		return vec4(col, alpha);
 	}
-	int in_glass2 = 0;
 	vec4 raymarch2(vec3 ro, vec3 rd, mat3 view) {
 		float dist = MIN_DIST;
 		obj_props oprops;
@@ -229,6 +222,7 @@ const fsSrc = `
 		vec4 cb = vec4(0);
 		vec3 n = vec3(0);
 		vec3 oldrd = vec3(0.);
+		int hit = 0;
 		for(int i = 0; i < MAX_STEPS; ++i) {
 			if(dist > FAR)
 				break;
@@ -238,29 +232,20 @@ const fsSrc = `
 				n = getNormal(ro + rd * dist);
 				if(oprops.type == 1) {
 					dist += BUBBLE_RADIUS * 1.1;
-					color.a = get_reflect_alpha(n, rd, rd, 1., oprops.n);
+					color.a = .5;
 				}
 				if(oprops.type == 2) {
-					dist += GLASS_RADIUS * 1.1;
+					dist += GLASS_RADIUS * 2.1;
 					oldrd = rd;
-					if(in_glass == 1) {
-						rd = refract(rd, -n, 1. / oprops.n);
-						color.a = get_reflect_alpha(n, oldrd, rd, oprops.n, 1.);
-						in_glass = 0;
-					} else {
-						rd = refract(rd, n, oprops.n);
-						color.a = get_reflect_alpha(n, oldrd, rd, 1., oprops.n);
-						in_glass = 1;
-					}
+					rd = refract(rd, n, oprops.n);
+					color.a = get_reflect_alpha(n, oldrd, rd, 1., oprops.n);
 				}
-				cb = over(cb, color);
-				if(color.a == 1.)
-					break;
+				cb = over(color, cb);
 			}
 			dist += abs(oprops.dist);
 			firsthit = 1;
 		}
-		return over(cb, textureCube(envMap, rd));
+		return over(textureCube(envMap, rd), cb);
 	}
 	void main() {
 		float timestep = time * .5;
