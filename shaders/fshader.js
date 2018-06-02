@@ -84,7 +84,7 @@ const fsSrc = `
 		obj_props horiz = obj_props(roundBoxSDF(p, vec3(1.6, 1.3, 1.3), .1), NULL_COL, -1, -1.);
 		obj_props vert = obj_props(roundBoxSDF(p, vec3(1.3, 1.6, 1.3), .1), NULL_COL, -1, -1.);
 		obj_props zed = obj_props(roundBoxSDF(p, vec3(1.3, 1.3, 1.6), .1), NULL_COL, -1, -1.);
-		obj_props glass_sphere = obj_props(sphereSDF(p, vec3(-.7, .7, .7), GLASS_RADIUS), BUBBLE_COL, 2, 1.117);
+		obj_props glass_sphere = obj_props(sphereSDF(p, vec3(-.7, .7, .7), GLASS_RADIUS), BUBBLE_COL, 2, 1.517);
 		obj_props mergebox = diff(diff(diff(box, horiz), vert), zed);
 		mergebox.dist += float(firsthit) * .2 * mergebox.dist;
 		return _union(_union(obj_props(metaballSDF(p), BUBBLE_COL, 1, 1.33), mergebox), glass_sphere);
@@ -171,6 +171,8 @@ const fsSrc = `
 					} else {
 						rd = refract(rd, n, oprops.n);
 						color.a = get_reflect_alpha(n, oldrd, rd, 1., oprops.n);
+						if(color.a > (1. - EPSILON))
+							color.rgb *= 2.;
 						in_glass = 1;
 					}
 				}
