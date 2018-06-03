@@ -6,6 +6,7 @@ const fsSrc = `
 	uniform float focalLength;
 	uniform vec2 windowSize;
 	uniform samplerCube envMap;
+	uniform sampler2D filmDepth;
 	uniform float time;
 
 	varying vec3 pos;
@@ -23,12 +24,12 @@ const fsSrc = `
 	#define SPECULAR_EXPONENT 20.
 	#define FAR 100.
 	#define NUM_METABALLS 2
-	#define ISOPOTENTIAL .8
+	#define ISOPOTENTIAL .4
 	#define NULL_COL vec4(0)
 	#define BOX_COL vec4(.7, .5, .2, 1)
 	#define BUBBLE_COL vec4(vec3(1.), .8)
 	#define BUBBLE_RADIUS 1.
-	#define GLASS_RADIUS .3
+	#define GLASS_RADIUS .5
 	#define GLASS_N 1.117
 	#define SIDE 1.5
 
@@ -36,6 +37,7 @@ const fsSrc = `
 	vec4 raymarch(vec3 ro, vec3 rd, mat3 view);
 	vec4 raymarch2(vec3 ro, vec3 rd, mat3 view);
 	vec4 raymarch3(vec3 ro, vec3 rd, mat3 view);
+	mat3 lookAt(vec3 eye);
 
 	obj_props intersect(obj_props a, obj_props b) {
 		obj_props o;
@@ -59,6 +61,12 @@ const fsSrc = `
 	}
 	float sphereSDF(vec3 p, vec3 c, float r) {
 		return length(p - c) - r;
+	}
+	vec3 sphereTexMap(vec3 n, sampler2D tex) {
+		float r = sqrt(n.x * n.x + n.z * n.z);
+		float phi = atan(n.y / r);
+		float theta = atan(n.z / n.x);
+		return texture2D(tex, vec2(theta, phi)).rgb;
 	}
 	float metaballSDF(vec3 p) {
 		float sumDensity = 0.;
@@ -112,7 +120,7 @@ const fsSrc = `
 	}
 	vec3 env_map(vec3 n, vec3 eye, vec3 iXPos, mat3 view) {
 		vec3 r = -reflect(eye, n);
-		return raymarch2(iXPos, r, view).rgb;
+		return raymarch2(iXPos, r, lookAt(r)).rgb;
 	}
 	vec3 diffuse(vec3 n, vec3 l) {
 		return vec3(.7, .8, .4) * max(0., dot(n,l));
@@ -125,7 +133,7 @@ const fsSrc = `
 		vec3 highlights = get_highlights(n, iXPos, rd, view);
 		vec3 back = textureCube(envMap, rd).rgb;
 		if(props.type == 1) {
-			col *= highlights + .2 * env_map(n, -rd, iXPos, view);
+			col *= highlights + .4 * env_map(n, -rd, iXPos, view);
 		} else if(props.type == 2)
 			col *= highlights + env_map(n, -rd, iXPos, view);
 		else
@@ -150,6 +158,9 @@ const fsSrc = `
 		Rparl *= Rparl;
 		return sin(ndoti) <= (n2 / n1) ? ((Rperp + Rparl) / 2.) : 1.;
 	}
+	float get_thickness(vec3 n) {
+		return sphereTexMap(n, filmDepth).r * 2.;
+	}
 	vec4 raymarch(vec3 ro, vec3 rd, mat3 view) {
 		float dist = MIN_DIST;
 		obj_props oprops;
@@ -166,7 +177,7 @@ const fsSrc = `
 				color = calc_color(ro, rd, dist, oprops, view);
 				n = getNormal(ro + rd * dist);
 				if(oprops.type == 1) {
-					float u = 2. * oprops.n * 1. * dot(refract(rd, n, oprops.n), -n);
+					float u = 2. * oprops.n * get_thickness(n) * dot(refract(rd, n, oprops.n), -n);
 					float C = 4.;
 					vec3 cdiff = vec3(0);
 					for (float m = 1.5; m < 9.; m += 1.) { //Sum contributions of wave
@@ -176,7 +187,7 @@ const fsSrc = `
 					}
 					color.rgb += color.rgb * cdiff;
 					dist += BUBBLE_RADIUS * 1.1;
-					color.a = .5;
+					color.a = .8;
 				}
 				if(oprops.type == 2) {
 					dist += GLASS_RADIUS * 2.1;
@@ -221,7 +232,7 @@ const fsSrc = `
 		vec3 highlights = get_highlights(n, iXPos, rd, view);
 		vec3 back = textureCube(envMap, rd).rgb;
 		if(props.type == 1) {
-			col *= highlights + env_map2(n, -rd, iXPos, view);
+			col *= highlights + .4 * env_map2(n, -rd, iXPos, view);
 		} else if(props.type == 2)
 			col *= highlights + env_map2(n, -rd, iXPos, view);
 		else
@@ -245,8 +256,17 @@ const fsSrc = `
 				color = calc_color2(ro, rd, dist, oprops, view);
 				n = getNormal(ro + rd * dist);
 				if(oprops.type == 1) {
+					float u = 2. * oprops.n * get_thickness(n) * dot(refract(rd, n, oprops.n), -n);
+					float C = 4.;
+					vec3 cdiff = vec3(0);
+					for (float m = 1.5; m < 9.; m += 1.) { //Sum contributions of wave
+						float y = 2. * u / (float(m) - .5) - 1.; //Bound from .5 to 1 micron
+						cdiff.xyz += blend3(vec3(C * (y - 0.75), C * (y - 0.5),
+								    C * (y - 0.25)));
+					}
+					color.rgb += color.rgb * cdiff;
 					dist += BUBBLE_RADIUS * 1.1;
-					color.a = .5;
+					color.a = .8;
 				}
 				if(oprops.type == 2) {
 					dist += GLASS_RADIUS * 2.1;
