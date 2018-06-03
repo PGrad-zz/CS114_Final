@@ -136,6 +136,11 @@ const fsSrc = `
 	vec4 over(vec4 dest, vec4 src) {
 		return src * src.a + dest * (1. - src.a);
 	}
+	vec3 blend3(vec3 x) {
+		vec3 y = 1. - x * x; //Bump function
+		y = max(y, vec3(0));
+		return y;
+	}
 	float get_reflect_alpha(vec3 n, vec3 i, vec3 t, float n1, float n2) {
 		float ndoti = dot(n, -i);
 		float ndott = dot(-n, t);
@@ -161,6 +166,15 @@ const fsSrc = `
 				color = calc_color(ro, rd, dist, oprops, view);
 				n = getNormal(ro + rd * dist);
 				if(oprops.type == 1) {
+					float u = 2. * oprops.n * 1. * dot(refract(rd, n, oprops.n), -n);
+					float C = 4.;
+					vec3 cdiff = vec3(0);
+					for (float m = 1.5; m < 9.; m += 1.) { //Sum contributions of wave
+						float y = 2. * u / (float(m) - .5) - 1.; //Bound from .5 to 1 micron
+						cdiff.xyz += blend3(vec3(C * (y - 0.75), C * (y - 0.5),
+								    C * (y - 0.25)));
+					}
+					color.rgb += color.rgb * cdiff;
 					dist += BUBBLE_RADIUS * 1.1;
 					color.a = .5;
 				}
@@ -193,7 +207,7 @@ const fsSrc = `
 		vec3 bottomlight = view * vec3(0., -5., 3.);
 		vec3 topl = normalize(toplight - iXPos);
 		vec3 bottoml = normalize(bottomlight - iXPos);
-		return phong(n, topl, -rd) + phong(n, bottoml, -rd) + phong(n, -rd, -rd);
+		return phong(n, topl, -rd) + phong(n, bottoml, -rd);
 	}
 	vec3 env_map2(vec3 n, vec3 eye, vec3 iXPos, mat3 view) {
 		vec3 r = -reflect(eye, n);
