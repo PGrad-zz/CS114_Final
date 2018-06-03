@@ -93,6 +93,20 @@ function loadCubemap(gl) {
 	});
 }
 
+function createAndLoadTexture(gl, img_path) {
+	const texture = gl.createTexture();
+	const pixel = new Uint8Array([0, 0, 255, 255]);
+	load_texture(gl, texture, null, pixel);
+	return loadImg(img_path).then((img) => {
+		if(load_texture(gl, texture, img))
+			Promise.resolve("Textures loaded");
+		else
+			Promise.reject("Can't load textures!");
+	}, (err) => {
+		Promise.reject(err);
+	});
+}
+
 function loadImg(img_name) {
 	const image = new Image();
 	const prom = new Promise((resolve, reject) => {
@@ -109,6 +123,7 @@ function loadImg(img_name) {
 }
 
 function load_cubemap_textures(gl, texture, face_imgs, dummy = undefined) {
+	gl.activeTexture(gl.TEXTURE0);
 	gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
 	let use_dummy = false;
 	if((use_dummy = !face_imgs)) {
@@ -130,22 +145,42 @@ function load_cubemap_textures(gl, texture, face_imgs, dummy = undefined) {
 	if(use_dummy)
 		for(var i = 0; i < NUM_FACES; ++i)
 			gl.texImage2D(face_types[i], 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, dummy);
-	else
-		set_and_config_textures(gl, face_types, face_imgs);
+	else {
+		for(var i = 0; i < NUM_FACES; ++i)
+			gl.texImage2D(face_types[i], 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, face_imgs[i]);
+		config_textures(gl, gl.TEXTURE_CUBE_MAP, face_imgs[0]);
+	}
 	return true;
 }
 
-function set_and_config_textures(gl, face_types, face_imgs) {
-		for(var i = 0; i < NUM_FACES; ++i)
-			gl.texImage2D(face_types[i], 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, face_imgs[i]);
-		if(isPowerOf2(face_imgs[0].width) && isPowerOf2(face_imgs[0].height))
-			gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
-		else {
-			if(glstate.get_webgl_version() == 2)
-				gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
-			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+function load_texture(gl, texture, img, dummy = undefined) {
+	gl.activeTexture(gl.TEXTURE1);
+	gl.bindTexture(gl.TEXTURE_2D, texture);
+	let use_dummy = false;
+	if((use_dummy = !img) && !dummy) {
+		console.log("No textures provided.");
+		return false;
+	}
+	if(use_dummy)
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, dummy);
+	else {
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+		config_textures(gl, gl.TEXTURE_2D, img);
+	}
+	return true;
+}
+
+function config_textures(gl, tex_type, tex_img) {
+	if(isPowerOf2(tex_img.width) && isPowerOf2(tex_img.height)) {
+		gl.generateMipmap(tex_type);
+		if(tex_type == gl.TEXTURE_2D)
+			gl.texParameteri(tex_type, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+	} else {
+		if(glstate.get_webgl_version() == 2)
+			gl.texParameteri(tex_type, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(tex_type, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(tex_type, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(tex_type, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 	}
 }
 
@@ -166,6 +201,7 @@ function getProgramInfo(gl, shaderProg) {
 			focalLength: gl.getUniformLocation(shaderProg, "focalLength"),
 			windowSize: gl.getUniformLocation(shaderProg, "windowSize"),
 			cubemap: gl.getUniformLocation(shaderProg, "envMap"),
+			film_depth: gl.getUniformLocation(shaderProg, "filmDepth"),
 			time: gl.getUniformLocation(shaderProg, "time")
 		}
 	};
@@ -232,6 +268,8 @@ function setUniforms(gl, programInfo, uniforms) {
 	gl.uniform1f(programInfo.uniformLocations.focalLength, uniforms.focalLength);
 	gl.uniform2fv(programInfo.uniformLocations.windowSize, uniforms.windowSize);
 	gl.uniform1f(programInfo.uniformLocations.time, curtime.getTime());
+	gl.uniform1i(programInfo.uniformLocations.cubemap, 0);
+	gl.uniform1i(programInfo.uniformLocations.film_depth, 1);
 }
 
 function getCameraPos(mvMatrix) {
@@ -265,9 +303,13 @@ function main() {
 	const programInfo = getProgramInfo(gl, shaderProg);
 	const bufs = initBuffers(gl);
 	loadCubemap(gl).then(() => {
+		return createAndLoadTexture(gl, 'assets/film_texture.jpg');
+	}, (err) => {
+		console.log(err || "Can't load cubemap!")
+	}).then(() => {
 		curtime = new Time(new Date().getTime());
 		animate(gl, programInfo, bufs);
 	}, (err) => {
-		console.log(err || "Can't load textures!")
+		console.log(err || "Can't load texture!")
 	});
 }
