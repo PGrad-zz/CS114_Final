@@ -21,7 +21,7 @@ const fsSrc = `
 	#define MAX_STEPS 64
 	#define PI 3.14159
 	#define EPSILON .0001
-	#define SPECULAR_EXPONENT 20.
+	#define SPECULAR_EXPONENT 10.
 	#define FAR 100.
 	#define NUM_METABALLS 2
 	#define ISOPOTENTIAL .4
@@ -96,7 +96,7 @@ const fsSrc = `
 		obj_props glass_sphere = obj_props(sphereSDF(p, vec3(-.7, .7, .7), GLASS_RADIUS), BUBBLE_COL, 2, GLASS_N);
 		obj_props mergebox = diff(diff(diff(box, horiz), vert), zed);
 		mergebox.dist += float(firsthit) * .2 * mergebox.dist;
-		obj_props metaballs = obj_props(metaballSDF(p), BUBBLE_COL, 1, 1.33);
+		obj_props metaballs = obj_props(metaballSDF(p), BUBBLE_COL, 1, 1.05);
 		return _union(_union(metaballs, mergebox), glass_sphere);
 	}
 	vec3 getRd(vec2 fragCoord, float fov) {
@@ -114,7 +114,6 @@ const fsSrc = `
 		       ));
 	}
 	vec3 phong(vec3 n, vec3 l, vec3 eye) {
-		vec3 h = normalize(l + eye);
 		vec3 r = -reflect(l, n);
 		return vec3(pow(max(0., dot(r, eye)), SPECULAR_EXPONENT));
 	}
@@ -159,7 +158,7 @@ const fsSrc = `
 		return sin(ndoti) <= (n2 / n1) ? ((Rperp + Rparl) / 2.) : 1.;
 	}
 	float get_thickness(vec3 n) {
-		return sphereTexMap(n, filmDepth).r * 2.;
+		return sphereTexMap(n, filmDepth).r;
 	}
 	vec4 raymarch(vec3 ro, vec3 rd, mat3 view) {
 		float dist = MIN_DIST;
@@ -185,7 +184,7 @@ const fsSrc = `
 						cdiff.xyz += blend3(vec3(C * (y - 0.75), C * (y - 0.5),
 								    C * (y - 0.25)));
 					}
-					color.rgb += color.rgb * cdiff;
+					color.rgb = mix(color.rgb, cdiff, .2);
 					dist += BUBBLE_RADIUS * 1.1;
 					color.a = .8;
 				}
@@ -264,7 +263,7 @@ const fsSrc = `
 						cdiff.xyz += blend3(vec3(C * (y - 0.75), C * (y - 0.5),
 								    C * (y - 0.25)));
 					}
-					color.rgb += color.rgb * cdiff;
+					color.rgb = mix(color.rgb, cdiff, .2);
 					dist += BUBBLE_RADIUS * 1.1;
 					color.a = .8;
 				}
