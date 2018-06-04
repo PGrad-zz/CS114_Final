@@ -15,7 +15,7 @@ function gl_state() {
 			yield webgl_versions[i];
 	}
 	const webgl_version_wherestopper = wherestopper();
-	function get_webgl_version() {
+	this.get_webgl_version = () => {
 		if(webgl_version_wherestopper.next().value == "webgl")
 			return 2;
 		if(webgl_version_wherestopper.next().value == "experimental-webgl")
@@ -177,9 +177,9 @@ function config_textures(gl, tex_type, tex_img) {
 			gl.texParameteri(tex_type, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 	} else {
 		if(glstate.get_webgl_version() == 2)
-			gl.texParameteri(tex_type, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(tex_type, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(tex_type, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(tex_type, gl.TEXTURE_WRAP_R, gl.REPEAT);
+		gl.texParameteri(tex_type, gl.TEXTURE_WRAP_S, gl.REPEAT);
+		gl.texParameteri(tex_type, gl.TEXTURE_WRAP_T, gl.REPEAT);
 		gl.texParameteri(tex_type, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 	}
 }
@@ -303,7 +303,7 @@ function main() {
 	const programInfo = getProgramInfo(gl, shaderProg);
 	const bufs = initBuffers(gl);
 	loadCubemap(gl).then(() => {
-		return createAndLoadTexture(gl, 'assets/film_texture.jpg');
+		return createAndLoadTexture(gl, 'assets/film_texture2.jpg');
 	}, (err) => {
 		console.log(err || "Can't load cubemap!")
 	}).then(() => {
