@@ -3,14 +3,59 @@
   <meta charset="utf-8" />
   <head>
     <title>CS114 Final</title>
+      <script type="text/javascript" src="js/jquery-1.12.2.min.js"></script>
+      <script type="text/javascript" src="js/glMatrix-0.9.5.js"></script>
+      <link rel="stylesheet" type="text/css" href="css/main.css">
   </head>
   <body onload="main()">
     <script src='http://127.0.0.1:9001/js/socket.js'></script>
     <script src="js/gl-matrix-min.js"></script>
     <script src="js/models.js"></script>
+    <script src="shaders/common.js"></script>
     <script src="shaders/vshader.js"></script>
-    <script src="shaders/fshader.js"></script>
+    <script src="shaders/bubbleFShader.js"></script>
+    <script src="shaders/glassFShader.js"></script>
     <script src="js/main.js"></script>
-    <canvas id="glCanvas" width="600" height="600"></canvas>
+    <div style="margin-top:10px; float:left">
+        <canvas id="glCanvas" style="border:none;" width="600" height="600"></canvas>
+    </div>
+    <div style="margin-left:10px; float:left">
+        <div class="panel">
+            <p>Rendering Control</p>
+            <table>
+                <tr>
+                    <td><input type="checkbox" onchange="changeRotatingState(this.checked);">Rotating object</td>
+                    <td>
+                        <input id="sliderBar" type="range" min="1" max="36" value="6" onchange="updateSlider(this.value);" disabled>
+                        (<span id="sliderAmount">60</span>&deg;/s)
+                    </td>
+                </tr>        
+                <tr>
+                    <td><input type="checkbox" onchange="changeAnimatedLightState(this.checked);">Rotating light</td>
+                    <td>
+                        <input id="sliderBarLight" type="range" min="1" max="36" value="6" onchange="updateSliderLight(this.value);" disabled>
+                        (<span id="sliderAmountLight">60</span>&deg;/s)
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div style="clear:left"></div>
+        <div class="panel">
+            <p>Animation Control</p>
+            <table>
+                <tr>
+                    <td>
+                        <input type="checkbox" onchange="changeAnimatedState(this.checked);" checked>Animated
+                    </td>
+                    <td>
+                        <button type="botton" onclick="resetMesh();">Restart</button>
+                        &nbsp;
+                        <button type="botton" onclick="window.location.reload();">Reset parameters</button>
+                    </td>                
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div style="clear:left"></div>
   </body>
 </html>

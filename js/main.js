@@ -40,7 +40,7 @@ function Time(start) {
 
 function initShaderProgram(gl, vsSrc, fsSrc) {
 	const vShader = loadShader(gl, gl.VERTEX_SHADER, vsSrc);
-	const fShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSrc);
+	const fShader = loadShader(gl, gl.FRAGMENT_SHADER, commonSrc + fsSrc);
 
 	if(!vShader || !fShader)
 		return null;
@@ -79,7 +79,8 @@ function loadCubemap(gl) {
 	const pixel = new Uint8Array([0, 0, 255, 255]);
 	load_cubemap_textures(gl, texture, null, pixel);
 	const img_path = "assets/cubemap/"
-	const img_paths = ["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"].map(x => img_path + x);
+	let img_paths = ["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"];
+	img_paths = img_paths.map(x => img_path + x);
 	let promises = [];
 	for(var i = 0; i < NUM_FACES; ++i)
 		promises.push(loadImg(img_paths[i]));
@@ -295,11 +296,11 @@ function main() {
 		console.log("Unable to initialize WebGL. Check if your browser supports it.");
 		return;
 	}
-	if(vsSrc === undefined || fsSrc === undefined) {
+	if(vsSrc === undefined || bubbleFsSrc === undefined || glassFsSrc === undefined) {
 		console.log("Define the shaders before using them");
 		return;
 	}
-	const shaderProg = initShaderProgram(gl, vsSrc, fsSrc);
+	const shaderProg = initShaderProgram(gl, vsSrc, glassFsSrc);
 	const programInfo = getProgramInfo(gl, shaderProg);
 	const bufs = initBuffers(gl);
 	loadCubemap(gl).then(() => {
