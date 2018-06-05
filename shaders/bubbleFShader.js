@@ -1,4 +1,5 @@
 const bubbleFsSrc = `
+	#define NUM_METABALLS 3
 	#define BUBBLE_COL vec4(vec3(1.), .8)
 	#define BUBBLE_RADIUS 1.
 	float get_thickness(vec3 n) {
@@ -8,14 +9,14 @@ const bubbleFsSrc = `
 		float sumDensity = 0.;
 		float sumRi = 0.;
 		float minDist = FAR;
-		vec3 centers[NUM_METABALLS]; centers[0] = vec3(0.); centers[1] = vec3(cos(time * .4));
-		float radii[NUM_METABALLS]; radii[0] = BUBBLE_RADIUS; radii[1] = BUBBLE_RADIUS;
+		float radii = BUBBLE_RADIUS;
+		vec3 centers[NUM_METABALLS]; centers[0] = vec3(0.); centers[1] = vec3(cos(time * .4)); centers[2] = vec3(-cos(time * .4), -cos(time * .4), cos(time * .4));
 		float r = 0.;
 		for(int i = 0; i < NUM_METABALLS; ++i) {
 			r = length(centers[i] - p);
-			if(r <= radii[i])
-				sumDensity += 2. * (r * r * r) / (radii[i] * radii[i] * radii[i]) - 3. * (r * r) / (radii[i] * radii[i]) + 1.;
-			minDist = min(minDist, (r - radii[i]));
+			if(r <= radii)
+				sumDensity += 2. * (r * r * r) / (radii * radii * radii) - 3. * (r * r) / (radii * radii) + 1.;
+			minDist = min(minDist, (r - radii));
 			sumRi += BUBBLE_RADIUS;
 		}
 		return max(minDist, (ISOPOTENTIAL - sumDensity) / (1.5 * sumRi));

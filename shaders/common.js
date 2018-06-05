@@ -23,7 +23,6 @@ const commonSrc = `
 	#define EPSILON .0001
 	#define SPECULAR_EXPONENT 10.
 	#define FAR 100.
-	#define NUM_METABALLS 2
 	#define ISOPOTENTIAL .6
 	#define NULL_COL vec4(0)
 	#define BOX_COL vec4(.7, .5, .2, 1)
