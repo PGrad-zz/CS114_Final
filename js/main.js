@@ -322,6 +322,10 @@ function loadNewCubemap(cube_index) {
 			for(var i = 0; i < 6; ++i)
 				img_paths.push("checkerboard.jpg");
 			break;
+		case 2:
+			img_path = "assets/skybox/mp_goldrush/";
+			img_paths = ["lf.png", "rt.png", "up.png", "dn.png", "ft.png", "bk.png"];
+			break;
 	}
 	halt = false;
 	return loadCubemap(gl, img_path, img_paths);
