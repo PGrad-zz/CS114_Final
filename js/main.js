@@ -8,6 +8,7 @@ function getGLContext() {
 	return glstate.get_webgl_context(canvas);
 }
 
+var gl;
 function gl_state() {
 	const webgl_versions = ["webgl2", "webgl", "experimental-webgl"];
 	function* wherestopper() {
@@ -30,13 +31,25 @@ function gl_state() {
 	}
 }
 
-function Time(start) {
-	var startTime = start;
+function Time() {
+	let time = 0
+	let last_time = 0;
+	let play = true;
+	let delta = 0;
 	this.getTime = () => {
-		return (new Date().getTime() - start) / 1000;
+		if(play)
+			last_time += delta;
+		return last_time;
+	};
+	this.setDelta = (frametime) => {
+		frametime *= .001;
+		delta = frametime - time;
+		time = frametime;
+	};
+	this.setPlay = (canPlay) => {
+		play = canPlay;
 	};
 }
-
 
 function initShaderProgram(gl, vsSrc, fsSrc) {
 	const vShader = loadShader(gl, gl.VERTEX_SHADER, vsSrc);
@@ -59,6 +72,11 @@ function initShaderProgram(gl, vsSrc, fsSrc) {
 	return shaderProg;
 }
 
+function loadNewFShader(fshaderName) {
+	shaderProg = initShaderProgram(gl, vsSrc, fshaderName);
+	programInfo = getProgramInfo(gl, shaderProg);
+}
+
 function loadShader(gl, type, src) {
 	const shader = gl.createShader(type);
 	gl.shaderSource(shader, src);
@@ -74,12 +92,10 @@ function loadShader(gl, type, src) {
 }
 
 const NUM_FACES = 6;
-function loadCubemap(gl) {
+function loadCubemap(gl, img_path, img_paths) {
 	const texture = gl.createTexture();
 	const pixel = new Uint8Array([0, 0, 255, 255]);
 	load_cubemap_textures(gl, texture, null, pixel);
-	const img_path = "assets/cubemap/"
-	let img_paths = ["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"];
 	img_paths = img_paths.map(x => img_path + x);
 	let promises = [];
 	for(var i = 0; i < NUM_FACES; ++i)
@@ -281,15 +297,39 @@ function getCameraPos(mvMatrix) {
 	return new Float32Array(translate);
 }
 
-function animate(gl, programInfo, bufs) {
-	let draw_frame = () => {
+var halt = false;
+function animate(gl, bufs) {
+	let draw_frame = (frametime) => {
+		curtime.setDelta(frametime);
+		while(halt);
 		draw(gl, programInfo, bufs);
 		window.requestAnimationFrame(draw_frame);
 	};
 	window.requestAnimationFrame(draw_frame);
 }
 
+function loadNewCubemap(cube_index) {
+	halt = true;
+	let img_path = "";
+	let img_paths = [];
+	switch(cube_index) {
+		case 0:
+			img_path = "assets/cubemap/";
+			img_paths = ["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"];
+			break;
+		case 1:
+			img_path = "assets/"
+			for(var i = 0; i < 6; ++i)
+				img_paths.push("checkerboard.jpg");
+			break;
+	}
+	halt = false;
+	return loadCubemap(gl, img_path, img_paths);
+}
+
 var curtime;
+var shaderProg;
+var programInfo;
 function main() {
 	const gl = getGLContext();
 	if(!gl) {
@@ -300,16 +340,15 @@ function main() {
 		console.log("Define the shaders before using them");
 		return;
 	}
-	const shaderProg = initShaderProgram(gl, vsSrc, glassFsSrc);
-	const programInfo = getProgramInfo(gl, shaderProg);
+	loadNewFShader(bubbleFsSrc);
 	const bufs = initBuffers(gl);
-	loadCubemap(gl).then(() => {
+	loadNewCubemap(0).then(() => {
 		return createAndLoadTexture(gl, 'assets/film_texture2.jpg');
 	}, (err) => {
 		console.log(err || "Can't load cubemap!")
 	}).then(() => {
-		curtime = new Time(new Date().getTime());
-		animate(gl, programInfo, bufs);
+		curtime = new Time();
+		animate(gl, bufs);
 	}, (err) => {
 		console.log(err || "Can't load texture!")
 	});
