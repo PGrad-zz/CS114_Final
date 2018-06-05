@@ -2,9 +2,6 @@
 <html lang="en-US">
   <meta charset="utf-8" />
   <head>
-    <title>CS114 Final</title>
-      <script type="text/javascript" src="js/jquery-1.12.2.min.js"></script>
-      <script type="text/javascript" src="js/glMatrix-0.9.5.js"></script>
       <link rel="stylesheet" type="text/css" href="css/main.css">
   </head>
   <body onload="main()">
@@ -24,17 +21,21 @@
             <p>Rendering Control</p>
             <table>
                 <tr>
-                    <td><input type="checkbox" onchange="changeRotatingState(this.checked);">Rotating object</td>
                     <td>
-                        <input id="sliderBar" type="range" min="1" max="36" value="6" onchange="updateSlider(this.value);" disabled>
-                        (<span id="sliderAmount">60</span>&deg;/s)
+                        <p>Type</p>
+                        <input type="radio" id="bubble" name="type" value="bubble" onclick="loadNewFShader(bubbleFsSrc)" checked>
+                        <label for="bubble">Bubble</label>
+                        <input type="radio" id="glass" name="type" value="glass" onclick="loadNewFShader(glassFsSrc)">
+                        <label for="glass">Glass</label>
                     </td>
-                </tr>        
+                </tr>
                 <tr>
-                    <td><input type="checkbox" onchange="changeAnimatedLightState(this.checked);">Rotating light</td>
                     <td>
-                        <input id="sliderBarLight" type="range" min="1" max="36" value="6" onchange="updateSliderLight(this.value);" disabled>
-                        (<span id="sliderAmountLight">60</span>&deg;/s)
+                        <p>Background</p>
+                        <input type="radio" id="mountains" name="texture" value="mountains" onclick="loadNewCubemap(0)" checked>
+                        <label for="mountains"><img src="assets/cubemap/nx.png"/ width="80" height="80"></label>
+                        <input type="radio" id="checkerboard" name="texture" value="checkerboard" onclick="loadNewCubemap(1)">
+                        <label for="checkerboard"><img src="assets/checkerboard.jpg"/ width="80" height="80"></label>
                     </td>
                 </tr>
             </table>
@@ -45,13 +46,8 @@
             <table>
                 <tr>
                     <td>
-                        <input type="checkbox" onchange="changeAnimatedState(this.checked);" checked>Animated
+                        <input type="checkbox" name="animated" onchange="curtime.setPlay(this.checked);" checked>Animated
                     </td>
-                    <td>
-                        <button type="botton" onclick="resetMesh();">Restart</button>
-                        &nbsp;
-                        <button type="botton" onclick="window.location.reload();">Reset parameters</button>
-                    </td>                
                 </tr>
             </table>
         </div>
