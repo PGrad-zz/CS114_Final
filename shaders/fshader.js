@@ -24,7 +24,7 @@ const fsSrc = `
 	#define SPECULAR_EXPONENT 10.
 	#define FAR 100.
 	#define NUM_METABALLS 2
-	#define ISOPOTENTIAL .4
+	#define ISOPOTENTIAL .6
 	#define NULL_COL vec4(0)
 	#define BOX_COL vec4(.7, .5, .2, 1)
 	#define BUBBLE_COL vec4(vec3(1.), .8)
@@ -72,7 +72,7 @@ const fsSrc = `
 		float sumDensity = 0.;
 		float sumRi = 0.;
 		float minDist = FAR;
-		vec3 centers[NUM_METABALLS]; centers[0] = vec3(0.); centers[1] = vec3(cos(time * .5));
+		vec3 centers[NUM_METABALLS]; centers[0] = vec3(0.); centers[1] = vec3(cos(time * .4));
 		float radii[NUM_METABALLS]; radii[0] = BUBBLE_RADIUS; radii[1] = BUBBLE_RADIUS;
 		float r = 0.;
 		for(int i = 0; i < NUM_METABALLS; ++i) {
@@ -158,7 +158,7 @@ const fsSrc = `
 		return sin(ndoti) <= (n2 / n1) ? ((Rperp + Rparl) / 2.) : 1.;
 	}
 	float get_thickness(vec3 n) {
-		return sphereTexMap(n, filmDepth).r;
+		return 1. - .2 * sphereTexMap(n, filmDepth).r;
 	}
 	vec4 raymarch(vec3 ro, vec3 rd, mat3 view) {
 		float dist = MIN_DIST;

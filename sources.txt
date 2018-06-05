@@ -1,0 +1,11 @@
+scratchapixel: metaball SDFs
+	Lipschitz constant
+gpu gems: diffraction chp 8
+	Model for summing wavelengths
+Reflections and Refractions in Ray Tracing - Stanford
+	Fresnel equations
+	Derivation of glsl refract
+jamie wong ray-marching
+	Ray-marching models
+	SDFs
+	Constructive Solid Geometry
