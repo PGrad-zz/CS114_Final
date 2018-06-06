@@ -1,6 +1,6 @@
 const glassFsSrc = `
 	#define GLASS_COL vec4(vec3(1.), .8)
-	#define GLASS_N vec3(1.1, 1.09, 1.11)
+	#define GLASS_N vec3(1.1)
 	#define GLASS_RADIUS 1.
 	obj_props sceneSDF(vec3 p) {
 		obj_props box = obj_props(roundBoxSDF(p, vec3(SIDE), .1), BOX_COL, 0, vec3(.239));
@@ -11,6 +11,7 @@ const glassFsSrc = `
 		obj_props mergebox = diff(diff(diff(box, horiz), vert), zed);
 		return _union(glass_sphere, mergebox);
 	}
+	int firsthit = 0;
 	vec4 raymarch(vec3 ro, vec3 rd, mat3 view) {
 		vec3 origro = ro;
 		vec3 origrd = rd;
@@ -33,10 +34,17 @@ const glassFsSrc = `
 					color = calc_color(ro, rd, dist, oprops, view);
 					n = getNormal(ro + rd * dist);
 					if(oprops.type == 2) {
-						dist += GLASS_RADIUS * 2.1;
 						oldrd = rd;
-						rd = refract(rd, n, oprops.n[rgb_i]);
-						color.a = get_reflect_alpha(n, oldrd, rd, 1., oprops.n[rgb_i]);
+						if(firsthit == 0) {
+							rd = refract(rd, n, 1. / oprops.n[rgb_i]);
+							color.a = get_reflect_alpha(n, oldrd, rd, 1., oprops.n[rgb_i]);
+							firsthit = 1;
+						}
+						else {
+							rd = refract(rd, n, oprops.n[rgb_i]);
+							color.a = get_reflect_alpha(n, oldrd, rd, oprops.n[rgb_i], 1.);
+						}
+						dist += GLASS_RADIUS;
 					}
 					cb = over(color, cb);
 					if(cb.a == 1.)
