@@ -2,6 +2,8 @@
 !js
 !shaders
 !css
+!presentation
+!*.odp
 !.gitignore
 !*.js
 gl-matrix-min.js
