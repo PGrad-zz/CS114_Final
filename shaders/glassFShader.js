@@ -1,6 +1,6 @@
 const glassFsSrc = `
 	#define GLASS_COL vec4(vec3(1.), .8)
-	#define GLASS_N vec3(1.03, 1.05, 1.07)
+	#define GLASS_N vec3(1.5, 1.7, 1.3)
 	#define GLASS_RADIUS 1.
 	obj_props sceneSDF(vec3 p) {
 		obj_props box = obj_props(roundBoxSDF(p, vec3(SIDE), .1), BOX_COL, 0, vec3(.239));
@@ -36,8 +36,15 @@ const glassFsSrc = `
 						ro += rd * dist;
 						oldrd = rd;
 						rd = refract(rd, n, 1. / oprops.n[rgb_i]);
-						dist = GLASS_RADIUS * 2.1;
 						color.a = get_reflect_alpha(n, oldrd, rd, 1., oprops.n[rgb_i]);
+						dist = GLASS_RADIUS * 2.1;
+						dist -= sphereSDF(ro + rd * dist, vec3(0), GLASS_RADIUS);
+						ro += rd * dist;
+						oldrd = rd;
+						n = -getNormal(ro);
+						rd = refract(rd, n, oprops.n[rgb_i]);
+						color.a *= get_reflect_alpha(n, oldrd, rd, oprops.n[rgb_i], 1.);
+						dist = .1;
 					}
 					cb = over(color, cb);
 					if(cb.a == 1.)
