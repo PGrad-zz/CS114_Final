@@ -86,7 +86,7 @@ const commonSrc = `
 	}
 	vec3 env_map(vec3 n, vec3 eye, vec3 iXPos, mat3 view) {
 		vec3 r = -reflect(eye, n);
-		return textureCube(envMap, r).rgb;
+		return raymarch2(iXPos, r, lookAt(r)).rgb;
 	}
 	vec3 diffuse(vec3 n, vec3 l) {
 		return vec3(.7, .8, .4) * max(0., dot(n,l));
