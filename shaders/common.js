@@ -86,7 +86,7 @@ const commonSrc = `
 	}
 	vec3 env_map(vec3 n, vec3 eye, vec3 iXPos, mat3 view) {
 		vec3 r = -reflect(eye, n);
-		return raymarch2(iXPos, r, lookAt(r)).rgb;
+		return textureCube(envMap, r).rgb;
 	}
 	vec3 diffuse(vec3 n, vec3 l) {
 		return vec3(.7, .8, .4) * max(0., dot(n,l));
@@ -138,25 +138,5 @@ const commonSrc = `
 		vec3 topl = normalize(toplight - iXPos);
 		vec3 bottoml = normalize(bottomlight - iXPos);
 		return phong(n, topl, -rd) + phong(n, bottoml, -rd);
-	}
-	vec3 env_map2(vec3 n, vec3 eye, vec3 iXPos, mat3 view) {
-		vec3 r = -reflect(eye, n);
-		return textureCube(envMap, r).rgb;
-	}
-	vec4 calc_color2(vec3 ro, vec3 rd, float dist, obj_props props, mat3 view) {
-		vec3 col = props.color.rgb;
-		float alpha = props.color.a;
-		vec3 iXPos = ro + rd * dist;
-		vec3 n = getNormal(iXPos);
-		vec3 highlights = get_highlights(n, iXPos, rd, view);
-		vec3 back = textureCube(envMap, rd).rgb;
-		if(props.type == 1) {
-			col *= highlights + .4 * env_map2(n, -rd, iXPos, view);
-		} else if(props.type == 2)
-			col *= highlights + env_map2(n, -rd, iXPos, view);
-		else
-			col *= diffuse(n, -rd) + highlights;
-		col = clamp(col, 0., .9);
-		return vec4(col, alpha);
 	}
 `
