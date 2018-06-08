@@ -38,6 +38,8 @@ function Time() {
 	let delta = 0;
 	let frames = 0;
 	let seccount = 0;
+	let frametimerEl = document.getElementById("frametimer");
+	let framecountEl = document.getElementById("framecount");
 	this.getTime = () => {
 		if(play)
 			last_time += delta;
@@ -56,7 +58,8 @@ function Time() {
 		++frames;
 		seccount += delta;
 		if(seccount >= 1000.) {
-			console.log(seccount / frames);
+			frametimerEl.innerHTML = (seccount / frames).toFixed(2);
+			framecountEl.innerHTML = frames;
 			seccount = frames = 0;
 		}
 	};
