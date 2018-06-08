@@ -36,6 +36,8 @@ function Time() {
 	let last_time = 0;
 	let play = true;
 	let delta = 0;
+	let frames = 0;
+	let seccount = 0;
 	this.getTime = () => {
 		if(play)
 			last_time += delta;
@@ -44,10 +46,19 @@ function Time() {
 	this.setDelta = (frametime) => {
 		frametime *= .001;
 		delta = frametime - time;
+		this.frameCount(delta * 1000);
 		time = frametime;
 	};
 	this.setPlay = (canPlay) => {
 		play = canPlay;
+	};
+	this.frameCount = (delta) => {
+		++frames;
+		seccount += delta;
+		if(seccount >= 1000.) {
+			console.log(seccount / frames);
+			seccount = frames = 0;
+		}
 	};
 }
 
