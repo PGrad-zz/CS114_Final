@@ -16,6 +16,7 @@ const commonSrc = `
 		int type;
 		vec3 n;
 	};
+	//mat3(dist, type, alpha, color, n)
 
 	#define MIN_DIST .05
 	#define MAX_STEPS 64
@@ -24,35 +25,36 @@ const commonSrc = `
 	#define SPECULAR_EXPONENT 10.
 	#define FAR 100.
 	#define ISOPOTENTIAL .6
-	#define NULL_COL vec4(0)
-	#define BOX_COL vec4(.7, .5, .2, 1)
+	#define NULL_COL vec3(0)
+	#define NULL_ALPHA 0
+	#define BOX_COL vec3(.7, .5, .2)
+	#define BOX_ALPHA 1.
 	#define SIDE 1.5
 
 	vec3 get_highlights(vec3 n, vec3 iXPos, vec3 rd, mat3 view);
 	vec4 raymarch(vec3 ro, vec3 rd, mat3 view);
 	vec4 raymarch2(vec3 ro, vec3 rd, mat3 view);
-	obj_props sceneSDF(vec3 p);
+	mat3 sceneSDF(vec3 p);
 	mat3 lookAt(vec3 eye);
 
-	obj_props intersect(obj_props a, obj_props b) {
-		obj_props o;
-		if(a.dist >= b.dist)
-			o = a;
+	mat3 intersect(mat3 a, mat3 b) {
+		mat3 m;
+		if(a[0][0] >= b[0][0])
+			m = a;
 		else
-			o = b;
-		return o;
+			m = b;
+		return m;
 	}
-	obj_props _union(obj_props a, obj_props b) {
-		obj_props o;
-		if(a.dist <= b.dist)
-			o = a;
+	mat3 _union(mat3 a, mat3 b) {
+		mat3 m;
+		if(a[0][0] <= b[0][0])
+			m = a;
 		else
-			o = b;
-		return o;
+			m = b;
+		return m;
 	}
-	obj_props diff(obj_props a, obj_props b) {
-		obj_props diff_prop = obj_props(-b.dist, a.color, a.type, a.n);
-		return intersect(a, diff_prop);
+	mat3 diff(mat3 a, mat3 b) {
+		return intersect(a, mat3(-b[0][0], a[0][1], a[0][2], a[1], a[2]));
 	}
 	float sphereSDF(vec3 p, vec3 c, float r) {
 		return length(p - c) - r;
@@ -75,9 +77,9 @@ const commonSrc = `
 	vec3 getNormal(vec3 iXPos) {
 		vec2 diff = vec2(EPSILON, 0.);
 		return normalize(vec3(
-		                 sceneSDF(iXPos + diff.xyy).dist - sceneSDF(iXPos - diff.xyy).dist,
-		                 sceneSDF(iXPos + diff.yxy).dist - sceneSDF(iXPos - diff.yxy).dist,
-		                 sceneSDF(iXPos + diff.yyx).dist - sceneSDF(iXPos - diff.yyx).dist
+		                 sceneSDF(iXPos + diff.xyy)[0][0] - sceneSDF(iXPos - diff.xyy)[0][0],
+		                 sceneSDF(iXPos + diff.yxy)[0][0] - sceneSDF(iXPos - diff.yxy)[0][0],
+		                 sceneSDF(iXPos + diff.yyx)[0][0] - sceneSDF(iXPos - diff.yyx)[0][0]
 		       ));
 	}
 	vec3 phong(vec3 n, vec3 l, vec3 eye) {
@@ -86,21 +88,18 @@ const commonSrc = `
 	}
 	vec3 env_map(vec3 n, vec3 eye, vec3 iXPos, mat3 view) {
 		vec3 r = -reflect(eye, n);
-		return textureCube(envMap, r).rgb;
+		return raymarch2(iXPos, r, lookAt(r)).rgb;
 	}
 	vec3 diffuse(vec3 n, vec3 l) {
 		return vec3(.7, .8, .4) * max(0., dot(n,l));
 	}
-	vec4 calc_color(vec3 ro, vec3 rd, float dist, obj_props props, mat3 view) {
-		vec3 col = props.color.rgb;
-		float alpha = props.color.a;
-		vec3 iXPos = ro + rd * dist;
-		vec3 n = getNormal(iXPos);
+	vec4 calc_color(vec3 ro, vec3 rd, float dist, mat3 props, mat3 view, vec3 n, vec3 iXPos) {
+		vec3 col = props[1];
+		float alpha = props[0][2];
 		vec3 highlights = get_highlights(n, iXPos, rd, view);
-		vec3 back = textureCube(envMap, rd).rgb;
-		if(props.type == 1) {
+		if(props[0][1] == 1.) {
 			col *= highlights + .4 * env_map(n, -rd, iXPos, view);
-		} else if(props.type == 2)
+		} else if(props[0][1] == 2.)
 			col *= highlights + env_map(n, -rd, iXPos, view);
 		else
 			col *= diffuse(n, -rd) + highlights;
@@ -138,5 +137,16 @@ const commonSrc = `
 		vec3 topl = normalize(toplight - iXPos);
 		vec3 bottoml = normalize(bottomlight - iXPos);
 		return phong(n, topl, -rd) + phong(n, bottoml, -rd);
+	}
+	vec3 env_map2(vec3 n, vec3 eye, vec3 iXPos, mat3 view) {
+		vec3 r = -reflect(eye, n);
+		return textureCube(envMap, r).rgb;
+	}
+	vec4 calc_color2(vec3 ro, vec3 rd, float dist, mat3 props, mat3 view, vec3 n, vec3 iXPos) {
+		vec3 col = props[1];
+		float alpha = props[0][2];
+		vec3 highlights = get_highlights(n, iXPos, rd, view);
+		col *= diffuse(n, -rd) + highlights;
+		return vec4(col, alpha);
 	}
 `
