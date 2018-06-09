@@ -358,6 +358,7 @@ var programInfo;
 function main() {
     	document.getElementById("bubble").checked = true;
     	document.getElementById("mountains").checked = true;
+    	document.getElementById("animated").checked = true;
 	window.addEventListener('resize', resize);
 	const gl = getGLContext();
 	if(!gl) {
