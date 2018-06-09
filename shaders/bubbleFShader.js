@@ -75,8 +75,8 @@ const bubbleFsSrc = `
 								    C * (y - 0.25)));
 					}
 					color.rgb += cdiff;
+					color.a = get_reflect_alpha(n, rd, t, 1., oprops[2][0]) + .1 * get_highlight_alpha(n, ro + rd * dist, rd, view);
 					dist += BUBBLE_RADIUS * 1.1;
-					color.a = get_reflect_alpha(n, rd, t, 1., oprops[2][0]);
 					hitbubble = 1;
 				}
 				cb = over(color, cb);
