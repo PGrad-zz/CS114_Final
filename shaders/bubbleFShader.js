@@ -4,9 +4,9 @@ const bubbleFsSrc = `
 	#define BUBBLE_COL vec3(vec3(1.))
 	#define BUBBLE_ALPHA .8
 	#define BUBBLE_RADIUS .6
-	#define BUBBLE_N 1.5
+	#define BUBBLE_N 1.1
 	float get_thickness(vec3 n) {
-		return 1. - .1 * sphereTexMap(n, filmDepth).b;
+		return 1. - .2 * sphereTexMap(n, filmDepth).b;
 	}
 	float metaballSDF(vec3 p) {
 		float sumDensity = 0.;
