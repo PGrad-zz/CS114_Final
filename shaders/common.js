@@ -85,10 +85,6 @@ const commonSrc = `
 		vec3 r = -reflect(l, n);
 		return vec3(pow(max(0., dot(r, eye)), SPECULAR_EXPONENT));
 	}
-	float phong_alpha(vec3 n, vec3 l, vec3 eye) {
-		vec3 r = -reflect(l, n);
-		return length(vec3(pow(max(0., dot(r, eye)), SPECULAR_EXPONENT)));
-	}
 	vec3 env_map(vec3 n, vec3 eye, vec3 iXPos, mat3 view) {
 		vec3 r = -reflect(eye, n);
 		return raymarch2(iXPos, r, lookAt(r)).rgb;
@@ -143,12 +139,7 @@ const commonSrc = `
 		return phong(n, topl, -rd) + phong(n, bottoml, -rd) + phong(n, centerl, -rd);
 	}
 	float get_highlight_alpha(vec3 n, vec3 iXPos, vec3 rd, mat3 view) {
-		vec3 toplight = view * vec3(0., 5., 3.);
-		vec3 bottomlight = view * vec3(0., -5., 3.);
-		vec3 topl = normalize(toplight - iXPos);
-		vec3 bottoml = normalize(bottomlight - iXPos);
-		vec3 centerl = normalize(-iXPos);
-		return phong_alpha(n, topl, -rd) + phong_alpha(n, bottoml, -rd) + phong_alpha(n, centerl, -rd);
+		return length(get_highlights(n, iXPos, rd, view));
 	}
 	vec3 env_map2(vec3 n, vec3 eye, vec3 iXPos, mat3 view) {
 		vec3 r = -reflect(eye, n);
