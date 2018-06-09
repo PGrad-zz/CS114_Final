@@ -19,12 +19,11 @@ const commonSrc = `
 	//mat3(dist, type, alpha, color, n)
 
 	#define MIN_DIST .05
-	#define MAX_STEPS 64
+	#define MAX_STEPS 80
 	#define PI 3.14159
 	#define EPSILON .0001
 	#define SPECULAR_EXPONENT 10.
 	#define FAR 100.
-	#define ISOPOTENTIAL .6
 	#define NULL_COL vec3(0)
 	#define NULL_ALPHA 0
 	#define BOX_COL vec3(.7, .5, .2)

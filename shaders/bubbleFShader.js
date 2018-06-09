@@ -1,8 +1,9 @@
 const bubbleFsSrc = `
+	#define ISOPOTENTIAL .2
 	#define NUM_METABALLS 3
 	#define BUBBLE_COL vec3(vec3(1.))
 	#define BUBBLE_ALPHA .8
-	#define BUBBLE_RADIUS 1.
+	#define BUBBLE_RADIUS .6
 	float get_thickness(vec3 n) {
 		return 1. - .2 * sphereTexMap(n, filmDepth).r;
 	}
