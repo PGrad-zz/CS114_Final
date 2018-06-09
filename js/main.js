@@ -1,6 +1,8 @@
 const glstate = new gl_state();
 function getGLContext() {
 	const canvas = document.querySelector("#glCanvas");
+	canvas.width = document.documentElement.clientWidth * .4;
+	canvas.height = canvas.width;
 	if(!canvas) {
 		console.log("Error getting canvas");
 		return undefined;
@@ -358,8 +360,6 @@ function main() {
 		console.log("Define the shaders before using them");
 		return;
 	}
-	gl.canvas.width = document.documentElement.clientWidth * .4;
-	gl.canvas.height = gl.canvas.width;
 	loadNewFShader(bubbleFsSrc);
 	const bufs = initBuffers(gl);
 	loadNewCubemap(0).then(() => {
