@@ -61,8 +61,10 @@ const bubbleFsSrc = `
 				n = getNormal(ro + rd * dist);
 				color = calc_color(ro, rd, dist, oprops, view, n, ro + rd * dist);
 				if(oprops[0][1] == 1.) {
-					if(hitbubble == 1)
+					if(hitbubble == 1) {
+						dist += BUBBLE_RADIUS;
 						continue;
+					}
 					t = refract(rd, n, 1. / oprops[2][0]);
 					float u = 2. * oprops[2][0] * get_thickness(n) * dot(t, -n);
 					float C = 4.;
@@ -73,7 +75,7 @@ const bubbleFsSrc = `
 								    C * (y - 0.25)));
 					}
 					color.rgb += cdiff;
-					dist += BUBBLE_RADIUS * 2.1;
+					dist += BUBBLE_RADIUS * 1.1;
 					color.a = get_reflect_alpha(n, rd, t, 1., oprops[2][0]);
 					hitbubble = 1;
 				}
