@@ -114,8 +114,8 @@ const commonSrc = `
 		return y;
 	}
 	float get_reflect_alpha(vec3 n, vec3 i, vec3 t, float n1, float n2) {
-		float ndoti = dot(n, -i);
-		float ndott = dot(-n, t);
+		float ndoti = clamp(dot(n, -i), 0., 1.);
+		float ndott = clamp(dot(-n, t), 0., 1.);
 		float Rperp = (n1 * ndoti - n2 * ndott) / (n1 * ndoti + n2 * ndott);
 		Rperp *= Rperp;
 		float Rparl = (n2 * ndoti - n1 * ndott) / (n2 * ndoti + n1 * ndott);

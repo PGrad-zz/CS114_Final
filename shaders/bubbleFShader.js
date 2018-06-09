@@ -4,7 +4,7 @@ const bubbleFsSrc = `
 	#define BUBBLE_COL vec3(vec3(1.))
 	#define BUBBLE_ALPHA .8
 	#define BUBBLE_RADIUS .6
-	#define BUBBLE_N 1.1
+	#define BUBBLE_N 1.5
 	float get_thickness(vec3 n) {
 		return 1. - .2 * sphereTexMap(n, filmDepth).b;
 	}
@@ -43,13 +43,16 @@ const bubbleFsSrc = `
 		mat3 mergebox = diff(diff(diff(box, horiz), vert), zed);
 		return mergebox;
 	}
+	int hitbubble = 0;
 	vec4 raymarch(vec3 ro, vec3 rd, mat3 view) {
 		float dist = MIN_DIST;
 		mat3 oprops;
 		vec4 color = vec4(0);
 		vec4 cb = vec4(0);
 		vec3 n = vec3(0);
-		vec3 oldrd = vec3(0.);
+		vec3 t = vec3(0.);
+		vec3 ft = t;
+		vec3 wt = t;
 		for(int i = 0; i < MAX_STEPS; ++i) {
 			if(dist > FAR)
 				break;
@@ -58,7 +61,10 @@ const bubbleFsSrc = `
 				n = getNormal(ro + rd * dist);
 				color = calc_color(ro, rd, dist, oprops, view, n, ro + rd * dist);
 				if(oprops[0][1] == 1.) {
-					float u = 2. * oprops[2][0] * get_thickness(n) * dot(refract(rd, n, 1. / oprops[2][0]), -n);
+					if(hitbubble == 1)
+						continue;
+					t = refract(rd, n, 1. / oprops[2][0]);
+					float u = 2. * oprops[2][0] * get_thickness(n) * dot(t, -n);
 					float C = 4.;
 					vec3 cdiff = vec3(0);
 					for (float m = 1.5; m < 9.; m += 1.) { //Sum contributions of wave
@@ -66,9 +72,10 @@ const bubbleFsSrc = `
 						cdiff.xyz += blend3(vec3(C * (y - 0.75), C * (y - 0.5),
 								    C * (y - 0.25)));
 					}
-					color.rgb = mix(color.rgb, cdiff, .2);
-					dist += BUBBLE_RADIUS * 1.1;
-					color.a = .8;
+					color.rgb += cdiff;
+					dist += BUBBLE_RADIUS * 2.1;
+					color.a = get_reflect_alpha(n, rd, t, 1., oprops[2][0]);
+					hitbubble = 1;
 				}
 				cb = over(color, cb);
 			}
