@@ -351,6 +351,8 @@ var curtime;
 var shaderProg;
 var programInfo;
 function main() {
+    document.getElementById("bubble").checked = true;
+    document.getElementById("mountains").checked = true;
 	const gl = getGLContext();
 	if(!gl) {
 		console.log("Unable to initialize WebGL. Check if your browser supports it.");
