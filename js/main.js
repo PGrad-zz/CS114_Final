@@ -284,7 +284,7 @@ function draw(gl, programInfo, bufs) {
 		projMatrix: projMatrix,
 		mvMatrix: mvMatrix,
 		focalLength: focal,
-		windowSize: [gl.canvas.clientWidth, gl.canvas.clientHeight]
+		windowSize: [gl.canvas.width, gl.canvas.height]
 	});
 
 	gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
@@ -358,6 +358,8 @@ function main() {
 		console.log("Define the shaders before using them");
 		return;
 	}
+	gl.canvas.width = document.documentElement.clientWidth * .4;
+	gl.canvas.height = gl.canvas.width;
 	loadNewFShader(bubbleFsSrc);
 	const bufs = initBuffers(gl);
 	loadNewCubemap(0).then(() => {
