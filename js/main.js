@@ -1,13 +1,18 @@
 const glstate = new gl_state();
 function getGLContext() {
 	const canvas = document.querySelector("#glCanvas");
-	canvas.width = document.documentElement.clientWidth * .4;
-	canvas.height = canvas.width;
+	resize();
 	if(!canvas) {
 		console.log("Error getting canvas");
 		return undefined;
 	}
 	return glstate.get_webgl_context(canvas);
+}
+
+function resize() {
+	const canvas = document.querySelector("#glCanvas");
+	canvas.width = document.documentElement.clientWidth * .4;
+	canvas.height = canvas.width;
 }
 
 var gl;
@@ -351,8 +356,9 @@ var curtime;
 var shaderProg;
 var programInfo;
 function main() {
-    document.getElementById("bubble").checked = true;
-    document.getElementById("mountains").checked = true;
+    	document.getElementById("bubble").checked = true;
+    	document.getElementById("mountains").checked = true;
+	window.addEventListener('resize', resize);
 	const gl = getGLContext();
 	if(!gl) {
 		console.log("Unable to initialize WebGL. Check if your browser supports it.");
