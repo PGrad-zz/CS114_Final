@@ -4,8 +4,9 @@ const bubbleFsSrc = `
 	#define BUBBLE_COL vec3(vec3(1.))
 	#define BUBBLE_ALPHA .8
 	#define BUBBLE_RADIUS .6
+	#define BUBBLE_N 1.5
 	float get_thickness(vec3 n) {
-		return 1. - .2 * sphereTexMap(n, filmDepth).r;
+		return 1. - .1 * sphereTexMap(n, filmDepth).b;
 	}
 	float metaballSDF(vec3 p) {
 		float sumDensity = 0.;
@@ -31,7 +32,7 @@ const bubbleFsSrc = `
 		mat3 vert = mat3(roundBoxSDF(p, vec3(1.3, 1.6, 1.3), .1), -1, NULL_ALPHA, NULL_COL, vec3(-1.));
 		mat3 zed = mat3(roundBoxSDF(p, vec3(1.3, 1.3, 1.6), .1), -1, NULL_ALPHA, NULL_COL, vec3(-1.));
 		mat3 mergebox = diff(diff(diff(box, horiz), vert), zed);
-		mat3 metaballs = mat3(metaballSDF(p), 1, BUBBLE_ALPHA, BUBBLE_COL, vec3(1.05));
+		mat3 metaballs = mat3(metaballSDF(p), 1, BUBBLE_ALPHA, BUBBLE_COL, vec3(BUBBLE_N));
 		return _union(metaballs, mergebox);
 	}
 	mat3 sceneSDFwoBalls(vec3 p) {
@@ -57,7 +58,7 @@ const bubbleFsSrc = `
 				n = getNormal(ro + rd * dist);
 				color = calc_color(ro, rd, dist, oprops, view, n, ro + rd * dist);
 				if(oprops[0][1] == 1.) {
-					float u = 2. * oprops[2][0] * get_thickness(n) * dot(refract(rd, n, oprops[2][0]), -n);
+					float u = 2. * oprops[2][0] * get_thickness(n) * dot(refract(rd, n, 1. / oprops[2][0]), -n);
 					float C = 4.;
 					vec3 cdiff = vec3(0);
 					for (float m = 1.5; m < 9.; m += 1.) { //Sum contributions of wave
