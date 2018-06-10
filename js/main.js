@@ -8,6 +8,13 @@ function getGLContext() {
 	return glstate.get_webgl_context(canvas);
 }
 
+function switchGlassSliders(enabled) {
+	const sliders = document.getElementsByClassName("refraction-glass");
+	const blockstyle = enabled ? "block" : "none";
+	for(var i = 0; i < sliders.length; ++i)
+		sliders[i].style.display = blockstyle;
+}
+
 function getSliderValue() {
 	const slider = document.getElementById("rindex");
 	return slider.value;
@@ -109,6 +116,11 @@ function initShaderProgram(gl, vsSrc, fsSrc) {
 	}
 
 	return shaderProg;
+}
+
+function switchShader(type) {
+	loadNewFShader(type == "bubble" ? bubbleFsSrc : glassFsSrc);
+	switchGlassSliders(type == "glass" ? true : false);
 }
 
 function loadNewFShader(fshaderName) {

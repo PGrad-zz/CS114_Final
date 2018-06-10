@@ -23,9 +23,9 @@
                 <tr>
                     <td>
                         <p>Type</p>
-                        <input type="radio" id="bubble" name="type" value="bubble" onclick="loadNewFShader(bubbleFsSrc)" checked>
+                        <input type="radio" id="bubble" name="type" value="bubble" onclick="switchShader('bubble')" checked>
                         <label for="bubble">Bubble</label>
-                        <input type="radio" id="glass" name="type" value="glass" onclick="loadNewFShader(glassFsSrc)">
+                        <input type="radio" id="glass" name="type" value="glass" onclick="switchShader('glass')">
                         <label for="glass">Glass</label>
                     </td>
                 </tr>
@@ -46,6 +46,24 @@
 			<div class="refraction">
 				<p class="slideranno">1</p>
 				<input type="range" min="1" max="5" value="1.5" step=".1" class="slider" id="rindex" oninput="setSliderAnno(getSliderValue())" onchange="setSliderAnno(getSliderValue())">
+				<p class="slideranno" id="slidervalue"></p>
+			</div>
+                    </td>
+                </tr>
+		<tr>
+                    <td>
+			<div class="refraction-glass">
+				<p class="slideranno">1</p>
+				<input type="range" min="1" max="5" value="1.5" step=".1" class="slider" id="gindex" oninput="setSliderAnno(getSliderValue())" onchange="setSliderAnno(getSliderValue())">
+				<p class="slideranno" id="slidervalue"></p>
+			</div>
+                    </td>
+                </tr>
+		<tr>
+                    <td>
+			<div class="refraction-glass">
+				<p class="slideranno">1</p>
+				<input type="range" min="1" max="5" value="1.5" step=".1" class="slider" id="bindex" oninput="setSliderAnno(getSliderValue())" onchange="setSliderAnno(getSliderValue())">
 				<p class="slideranno" id="slidervalue"></p>
 			</div>
                     </td>
