@@ -45,8 +45,8 @@
 		    	<p>Indices of Refraction</p>
 			<div class="refraction">
 				<p class="slideranno">1</p>
-				<input type="range" min="1" max="5" value="1.5" step=".1" class="slider" id="rindex" oninput="setSliderAnno(getSliderValue())" onchange="setSliderAnno(getSliderValue())">
-				<p class="slideranno" id="slidervalue"></p>
+				<input type="range" min="1" max="5" value="1.5" step=".1" class="slider" id="rindex" oninput="setSlider({ index : 'rindex' })" onchange="setSlider({ index : 'rindex' })">
+				<p class="slideranno" id="rindexvalue"></p>
 			</div>
                     </td>
                 </tr>
@@ -54,8 +54,8 @@
                     <td>
 			<div class="refraction-glass">
 				<p class="slideranno">1</p>
-				<input type="range" min="1" max="5" value="1.5" step=".1" class="slider" id="gindex" oninput="setSliderAnno(getSliderValue())" onchange="setSliderAnno(getSliderValue())">
-				<p class="slideranno" id="slidervalue"></p>
+				<input type="range" min="1" max="5" value="1.5" step=".1" class="slider" id="gindex" oninput="setSlider({ index : 'gindex' })" onchange="setSlider({ index : 'gindex' })">
+				<p class="slideranno" id="gindexvalue"></p>
 			</div>
                     </td>
                 </tr>
@@ -63,8 +63,8 @@
                     <td>
 			<div class="refraction-glass">
 				<p class="slideranno">1</p>
-				<input type="range" min="1" max="5" value="1.5" step=".1" class="slider" id="bindex" oninput="setSliderAnno(getSliderValue())" onchange="setSliderAnno(getSliderValue())">
-				<p class="slideranno" id="slidervalue"></p>
+				<input type="range" min="1" max="5" value="1.5" step=".1" class="slider" id="bindex" oninput="setSlider({ index : 'bindex' })" onchange="setSlider({ index : 'bindex' })">
+				<p class="slideranno" id="bindexvalue"></p>
 			</div>
                     </td>
                 </tr>

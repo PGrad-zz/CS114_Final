@@ -8,25 +8,48 @@ function getGLContext() {
 	return glstate.get_webgl_context(canvas);
 }
 
+var defaultindexvalue = {
+	"rindex": 1.5,
+	"gindex": 1.7,
+	"bindex": 1.7
+};
+
+var firstswitch = true;
 function switchGlassSliders(enabled) {
 	const sliders = document.getElementsByClassName("refraction-glass");
 	const blockstyle = enabled ? "block" : "none";
 	for(var i = 0; i < sliders.length; ++i)
 		sliders[i].style.display = blockstyle;
+	if(firstswitch) {
+		setdefault('gindex');
+		setdefault('bindex');
+		firstswitch = false;
+	}
 }
 
-function getSliderValue() {
-	const slider = document.getElementById("rindex");
-	return slider.value;
+function getSliderValue(index) {
+	const slider = document.getElementById(index);
+	return slider ? slider.value : defaultindexvalue[index];
 }
 
-function setSliderAnno(val) {
-	const sliderright = document.getElementById("slidervalue");
+function setSliderAnno(val, index) {
+	const sliderright = document.getElementById(index + "value");
 	return sliderright.innerHTML = val;
 }
 
-function setSliderValue(val) {
-	const slider = document.getElementById("rindex");
+function setSlider(props) {
+	if(props.val)
+		setSliderAnno(setSliderValue(props.val, props.index), props.index);
+	else
+		setSliderAnno(getSliderValue(props.index), props.index);
+}
+
+function setdefault(index) {
+	setSlider({ val: defaultindexvalue[index], index: index});
+}
+
+function setSliderValue(val, index) {
+	const slider = document.getElementById(index);
 	return slider.value = val;
 }
 
@@ -121,6 +144,24 @@ function initShaderProgram(gl, vsSrc, fsSrc) {
 function switchShader(type) {
 	loadNewFShader(type == "bubble" ? bubbleFsSrc : glassFsSrc);
 	switchGlassSliders(type == "glass" ? true : false);
+	switchRIndex(type);
+}
+
+var bubbleRindex = 1.5;
+var glassRindex = 1.5;
+
+function switchRIndex(type) {
+	const slider = document.getElementById("rindex");
+	if(type == 'glass') {
+		bubbleRindex = slider.value;
+		setSlider({ val : glassRindex, index : 'rindex'});
+		slider.style.setProperty("--rindex-color", "#ff0000");
+	}
+	else if(type == 'bubble') {
+		glassRindex = slider.value;
+		setSlider({ val : bubbleRindex, index : 'rindex' });
+		slider.style.setProperty("--rindex-color", "#ffffff");
+	}
 }
 
 function loadNewFShader(fshaderName) {
@@ -271,7 +312,7 @@ function getProgramInfo(gl, shaderProg) {
 			cubemap: gl.getUniformLocation(shaderProg, "envMap"),
 			film_depth: gl.getUniformLocation(shaderProg, "filmDepth"),
 			time: gl.getUniformLocation(shaderProg, "time"),
-			bubble_n: gl.getUniformLocation(shaderProg, "BUBBLE_N"),
+			n: gl.getUniformLocation(shaderProg, "n"),
 		}
 	};
 }
@@ -324,7 +365,7 @@ function draw(gl, programInfo, bufs) {
 		mvMatrix: mvMatrix,
 		focalLength: focal,
 		windowSize: [gl.canvas.width, gl.canvas.height],
-		bubble_n: getSliderValue()
+		n: [getSliderValue('rindex'), getSliderValue('gindex'), getSliderValue('bindex')]
 	});
 
 	gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
@@ -341,7 +382,7 @@ function setUniforms(gl, programInfo, uniforms) {
 	gl.uniform1f(programInfo.uniformLocations.time, curtime.getTime());
 	gl.uniform1i(programInfo.uniformLocations.cubemap, 0);
 	gl.uniform1i(programInfo.uniformLocations.film_depth, 1);
-	gl.uniform1f(programInfo.uniformLocations.bubble_n, uniforms.bubble_n);
+	gl.uniform3fv(programInfo.uniformLocations.n, uniforms.n);
 }
 
 function getCameraPos(mvMatrix) {
@@ -393,8 +434,8 @@ function main() {
     	document.getElementById("bubble").checked = true;
     	document.getElementById("mountains").checked = true;
     	document.getElementById("animated").checked = true;
+	setdefault('rindex');
 	const gl = getGLContext();
-	setSliderAnno(setSliderValue(1.5));
 	if(!gl) {
 		console.log("Unable to initialize WebGL. Check if your browser supports it.");
 		return;

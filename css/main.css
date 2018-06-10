@@ -1,3 +1,6 @@
+:root {
+	--rindex-color: #ffffff;
+}
 body, p, table {
 	font-family: Verdana, Geneva, 'DejaVu Sans', sans-serif;
 	font-size: 14px;
@@ -56,7 +59,7 @@ input[type=range]::-webkit-slider-thumb {
 }
 
 #rindex::-webkit-slider-thumb {
-	background: #ff0000;
+	background: var(--rindex-color);
 }
 
 #gindex::-webkit-slider-thumb {
@@ -68,7 +71,7 @@ input[type=range]::-webkit-slider-thumb {
 }
 
 #rindex::-moz-range-thumb {
-	background: #ff0000;
+	background: var(--rindex-color);
 }
 
 #gindex::-moz-range-thumb {
@@ -80,7 +83,7 @@ input[type=range]::-webkit-slider-thumb {
 }
 
 #rindex::-ms-thumb {
-	background: #ff0000;
+	background: var(--rindex-color);
 }
 
 #gindex::-ms-thumb {
