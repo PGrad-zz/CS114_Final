@@ -40,6 +40,16 @@
                         <label for="checkerboard"><img src="assets/skybox/mp_goldrush/bk.png"/ width="80" height="80"></label>
                     </td>
                 </tr>
+		<tr>
+                    <td>
+		    	<p>Indices of Refraction</p>
+			<div class="refraction">
+				<p class="slideranno">1</p>
+				<input type="range" min="1" max="5" value="1.5" step=".1" class="slider" id="rindex" oninput="setSliderAnno(getSliderValue())" onchange="setSliderAnno(getSliderValue())">
+				<p class="slideranno" id="slidervalue"></p>
+			</div>
+                    </td>
+                </tr>
             </table>
         </div>
         <div style="clear:left"></div>
