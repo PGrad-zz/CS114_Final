@@ -1,7 +1,7 @@
 const glassFsSrc = `
 	#define GLASS_COL vec3(1.)
 	#define GLASS_ALPHA .8
-	#define GLASS_N vec3(1.5, 1.7, 1.6)
+	#define GLASS_N n
 	#define GLASS_RADIUS 1.
 	mat3 sceneSDF(vec3 p) {
 		mat3 box = mat3(roundBoxSDF(p, vec3(SIDE), .1), 0, BOX_ALPHA, BOX_COL, vec3(.239));

@@ -8,7 +8,7 @@ const commonSrc = `
 	uniform samplerCube envMap;
 	uniform sampler2D filmDepth;
 	uniform float time;
-	uniform float BUBBLE_N;
+	uniform vec3 n;
 
 	varying vec3 pos;
 	struct obj_props {
