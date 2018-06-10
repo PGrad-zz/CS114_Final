@@ -8,6 +8,21 @@ function getGLContext() {
 	return glstate.get_webgl_context(canvas);
 }
 
+function getSliderValue() {
+	const slider = document.getElementById("rindex");
+	return slider.value;
+}
+
+function setSliderAnno(val) {
+	const sliderright = document.getElementById("slidervalue");
+	return sliderright.innerHTML = val;
+}
+
+function setSliderValue(val) {
+	const slider = document.getElementById("rindex");
+	return slider.value = val;
+}
+
 function resize(gl) {
 	let displayWidth = document.documentElement.clientWidth * .4;
 	let displayHeight = displayWidth;
@@ -243,7 +258,8 @@ function getProgramInfo(gl, shaderProg) {
 			windowSize: gl.getUniformLocation(shaderProg, "windowSize"),
 			cubemap: gl.getUniformLocation(shaderProg, "envMap"),
 			film_depth: gl.getUniformLocation(shaderProg, "filmDepth"),
-			time: gl.getUniformLocation(shaderProg, "time")
+			time: gl.getUniformLocation(shaderProg, "time"),
+			bubble_n: gl.getUniformLocation(shaderProg, "BUBBLE_N"),
 		}
 	};
 }
@@ -295,7 +311,8 @@ function draw(gl, programInfo, bufs) {
 		projMatrix: projMatrix,
 		mvMatrix: mvMatrix,
 		focalLength: focal,
-		windowSize: [gl.canvas.width, gl.canvas.height]
+		windowSize: [gl.canvas.width, gl.canvas.height],
+		bubble_n: getSliderValue()
 	});
 
 	gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
@@ -312,6 +329,7 @@ function setUniforms(gl, programInfo, uniforms) {
 	gl.uniform1f(programInfo.uniformLocations.time, curtime.getTime());
 	gl.uniform1i(programInfo.uniformLocations.cubemap, 0);
 	gl.uniform1i(programInfo.uniformLocations.film_depth, 1);
+	gl.uniform1f(programInfo.uniformLocations.bubble_n, uniforms.bubble_n);
 }
 
 function getCameraPos(mvMatrix) {
@@ -364,6 +382,7 @@ function main() {
     	document.getElementById("mountains").checked = true;
     	document.getElementById("animated").checked = true;
 	const gl = getGLContext();
+	setSliderAnno(setSliderValue(1.5));
 	if(!gl) {
 		console.log("Unable to initialize WebGL. Check if your browser supports it.");
 		return;

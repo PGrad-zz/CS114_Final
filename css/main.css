@@ -24,6 +24,14 @@ div.panel hr {
     margin: 0 0 10px 0;
 }
 
+.slideranno {
+	float: left;
+}
+
+.slider {
+	float: left;
+}
+
 td {
 	padding: 3px 0 3px 0;
 }
