@@ -62,7 +62,7 @@ const bubbleFsSrc = `
 				color = calc_color(ro, rd, dist, oprops, view, n, ro + rd * dist);
 				if(oprops[0][1] == 1.) {
 					if(hitbubble == 1) {
-						dist += BUBBLE_RADIUS;
+						dist += BUBBLE_RADIUS * ISOPOTENTIAL;
 						continue;
 					}
 					t = refract(rd, n, 1. / oprops[2][0]);
