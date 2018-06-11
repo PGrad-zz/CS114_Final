@@ -80,6 +80,8 @@ const bubbleFsSrc = `
 					hitbubble = 1;
 				}
 				cb = over(color, cb);
+				if(cb.a == 1.)
+					break;
 			}
 			dist += abs(oprops[0][0]);
 		}
