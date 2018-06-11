@@ -23,7 +23,7 @@ const commonSrc = `
 	#define MAX_STEPS 80
 	#define PI 3.14159
 	#define EPSILON .0001
-	#define SPECULAR_EXPONENT 10.
+	#define SPECULAR_EXPONENT 3.
 	#define FAR 100.
 	#define NULL_COL vec3(0)
 	#define NULL_ALPHA 0
@@ -134,9 +134,10 @@ const commonSrc = `
 	vec3 get_highlights(vec3 n, vec3 iXPos, vec3 rd, mat3 view) {
 		vec3 toplight = view * vec3(0., 5., 3.);
 		vec3 bottomlight = view * vec3(0., -5., 3.);
+		vec3 centerlight = view * vec3(0., 0., -10);
 		vec3 topl = normalize(toplight - iXPos);
 		vec3 bottoml = normalize(bottomlight - iXPos);
-		vec3 centerl = normalize(-iXPos);
+		vec3 centerl = normalize(centerlight - iXPos);
 		return phong(n, topl, -rd) + phong(n, bottoml, -rd) + phong(n, centerl, -rd);
 	}
 	float get_highlight_alpha(vec3 n, vec3 iXPos, vec3 rd, mat3 view) {
