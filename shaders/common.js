@@ -23,7 +23,7 @@ const commonSrc = `
 	#define MAX_STEPS 80
 	#define PI 3.14159
 	#define EPSILON .0001
-	#define SPECULAR_EXPONENT 3.
+	#define SPECULAR_EXPONENT 10.
 	#define FAR 100.
 	#define NULL_COL vec3(0)
 	#define NULL_ALPHA 0
