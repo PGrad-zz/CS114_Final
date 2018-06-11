@@ -134,7 +134,7 @@ const commonSrc = `
 	vec3 get_highlights(vec3 n, vec3 iXPos, vec3 rd, mat3 view) {
 		vec3 toplight = view * vec3(0., 5., 3.);
 		vec3 bottomlight = view * vec3(0., -5., 3.);
-		vec3 centerlight = view * vec3(0., 0., -10);
+		vec3 centerlight = view * vec3(2., 4., -10);
 		vec3 topl = normalize(toplight - iXPos);
 		vec3 bottoml = normalize(bottomlight - iXPos);
 		vec3 centerl = normalize(centerlight - iXPos);
