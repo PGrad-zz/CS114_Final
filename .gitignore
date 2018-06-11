@@ -2,8 +2,10 @@
 !js
 !shaders
 !css
-!presentation
+!milestone_presentation
+!final_presentation
 !*.odp
+!*.pptx
 !.gitignore
 !*.js
 gl-matrix-min.js
