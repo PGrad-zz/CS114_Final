@@ -7,9 +7,16 @@
 !*.odp
 !*.pptx
 !.gitignore
+!.gitattributes
 !*.js
-gl-matrix-min.js
 !*.html
 !*.css
 !README
 !*.txt
+!assets
+!assets/cubemap
+!assets/skybox
+!assets/skybox/mountain
+!assets/skybox/mp_goldrush
+!*.png
+!*.jpg
